@@ -1,0 +1,110 @@
+<!DOCTYPE html>
+<html lang="ja">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>パスポート写真アップロード</title>
+    <style>
+        #preview {
+            max-width: 300px;
+            max-height: 300px;
+            margin-top: 20px;
+            border: 1px solid #ccc;
+            display: block; /* 初期状態では表示しない */
+        }
+    </style>
+</head>
+<body>
+    <h1>パスポート写真アップロード</h1>
+    <form id="uploadForm">
+        <input type="file" id="photoInput" accept="image/jpeg, image/png">
+        <p>※ JPEGまたはPNG形式、背景は白でお願いします。</p>
+        <img id="preview" src="#" alt="選択された画像プレビュー" style="display: none;">
+        <button type="submit">アップロード</button>
+    </form>
+    <div id="message"></div>
+
+    <script>
+        const photoInput = document.getElementById('photoInput');
+        const preview = document.getElementById('preview');
+        const uploadForm = document.getElementById('uploadForm');
+        const messageDiv = document.getElementById('message');
+
+        photoInput.addEventListener('change', function(event) {
+            const file = event.target.files[0];
+
+            if (file) {
+                // ファイル形式のチェック
+                const allowedTypes = ['image/jpeg', 'image/png'];
+                if (!allowedTypes.includes(file.type)) {
+                    messageDiv.textContent = 'エラー: JPEGまたはPNGファイルを選択してください。';
+                    preview.style.display = 'none';
+                    preview.src = '#';
+                    photoInput.value = ''; // ファイル選択をクリア
+                    return;
+                }
+
+                // ファイルサイズのチェック (例: 5MBまで)
+                const maxSize = 5 * 1024 * 1024; // 5MB
+                if (file.size > maxSize) {
+                    messageDiv.textContent = 'エラー: ファイルサイズが大きすぎます（5MBまで）。';
+                    preview.style.display = 'none';
+                    preview.src = '#';
+                    photoInput.value = '';
+                    return;
+                }
+
+                // プレビュー表示
+                const reader = new FileReader();
+                reader.onload = function(e) {
+                    preview.src = e.target.result;
+                    preview.style.display = 'block';
+                    messageDiv.textContent = ''; // エラーメッセージをクリア
+                };
+                reader.readAsDataURL(file);
+            } else {
+                preview.style.display = 'none';
+                preview.src = '#';
+                messageDiv.textContent = '';
+            }
+        });
+
+        uploadForm.addEventListener('submit', async function(event) {
+            event.preventDefault(); // フォームのデフォルト送信を防止
+
+            const file = photoInput.files[0];
+            if (!file) {
+                messageDiv.textContent = '画像を選択してください。';
+                return;
+            }
+
+            // FormDataを作成し、ファイルを添付
+            const formData = new FormData();
+            formData.append('passportPhoto', file); // 'passportPhoto'はサーバー側で受け取るフィールド名
+
+            try {
+                // サーバーに画像をアップロード
+                const response = await fetch('/upload', { // バックエンドのアップロードURL
+                    method: 'POST',
+                    body: formData,
+                });
+
+                if (response.ok) {
+                    const data = await response.json();
+                    messageDiv.textContent = 'アップロード成功: ' + data.message;
+                    // フォームをリセットするなど
+                    photoInput.value = '';
+                    preview.style.display = 'none';
+                    preview.src = '#';
+                } else {
+                    const errorData = await response.json();
+                    messageDiv.textContent = 'アップロード失敗: ' + errorData.message;
+                }
+            } catch (error) {
+                console.error('通信エラー:', error);
+                messageDiv.textContent = 'エラーが発生しました。ネットワーク接続を確認してください。';
+            }
+        });
+    </script>
+</body>
+</html>
