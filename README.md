@@ -1,2 +1,2 @@
 # devmyna.github.io
-Website examples
+GitHub Pages Examples
