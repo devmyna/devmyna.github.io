@@ -3,107 +3,458 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>パスポート写真アップロード</title>
+    <title>Photo Upload - 写真アップロード</title>
     <style>
-        #preview {
-            max-width: 300px;
-            max-height: 300px;
+        * {
+            margin: 0;
+            padding: 0;
+            box-sizing: border-box;
+        }
+
+        body {
+            font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif;
+            background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+            min-height: 100vh;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            padding: 20px;
+        }
+
+        .container {
+            background: rgba(255, 255, 255, 0.95);
+            backdrop-filter: blur(10px);
+            border-radius: 20px;
+            padding: 40px;
+            box-shadow: 0 20px 40px rgba(0, 0, 0, 0.1);
+            width: 100%;
+            max-width: 600px;
+            text-align: center;
+        }
+
+        h1 {
+            color: #333;
+            margin-bottom: 30px;
+            font-size: 2.5rem;
+            font-weight: 300;
+        }
+
+        .upload-area {
+            border: 3px dashed #667eea;
+            border-radius: 15px;
+            padding: 60px 20px;
+            margin: 30px 0;
+            transition: all 0.3s ease;
+            cursor: pointer;
+            position: relative;
+            overflow: hidden;
+        }
+
+        .upload-area:hover {
+            border-color: #764ba2;
+            background: rgba(102, 126, 234, 0.05);
+            transform: translateY(-2px);
+        }
+
+        .upload-area.dragover {
+            border-color: #764ba2;
+            background: rgba(102, 126, 234, 0.1);
+            transform: scale(1.02);
+        }
+
+        .upload-icon {
+            font-size: 4rem;
+            color: #667eea;
+            margin-bottom: 20px;
+        }
+
+        .upload-text {
+            color: #666;
+            font-size: 1.2rem;
+            margin-bottom: 10px;
+        }
+
+        .upload-subtext {
+            color: #999;
+            font-size: 0.9rem;
+        }
+
+        #fileInput {
+            display: none;
+        }
+
+        .btn {
+            background: linear-gradient(45deg, #667eea, #764ba2);
+            color: white;
+            border: none;
+            padding: 12px 30px;
+            border-radius: 25px;
+            font-size: 1rem;
+            cursor: pointer;
+            transition: all 0.3s ease;
+            margin: 10px;
+        }
+
+        .btn:hover {
+            transform: translateY(-2px);
+            box-shadow: 0 10px 20px rgba(102, 126, 234, 0.3);
+        }
+
+        .preview-container {
+            margin-top: 30px;
+            display: grid;
+            grid-template-columns: repeat(auto-fill, minmax(200px, 1fr));
+            gap: 20px;
+        }
+
+        .image-preview {
+            position: relative;
+            border-radius: 15px;
+            overflow: hidden;
+            box-shadow: 0 10px 20px rgba(0, 0, 0, 0.1);
+            transition: transform 0.3s ease;
+        }
+
+        .image-preview:hover {
+            transform: scale(1.05);
+        }
+
+        .image-preview img {
+            width: 100%;
+            height: 200px;
+            object-fit: cover;
+        }
+
+        .image-info {
+            position: absolute;
+            bottom: 0;
+            left: 0;
+            right: 0;
+            background: linear-gradient(transparent, rgba(0, 0, 0, 0.7));
+            color: white;
+            padding: 20px 15px 15px;
+            font-size: 0.9rem;
+        }
+
+        .delete-btn {
+            position: absolute;
+            top: 10px;
+            right: 10px;
+            background: rgba(255, 255, 255, 0.9);
+            border: none;
+            border-radius: 50%;
+            width: 30px;
+            height: 30px;
+            cursor: pointer;
+            font-size: 1.2rem;
+            color: #ff4757;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            transition: all 0.3s ease;
+        }
+
+        .delete-btn:hover {
+            background: #ff4757;
+            color: white;
+            transform: scale(1.1);
+        }
+
+        .progress-bar {
+            width: 100%;
+            height: 6px;
+            background: rgba(102, 126, 234, 0.2);
+            border-radius: 3px;
+            margin: 20px 0;
+            overflow: hidden;
+        }
+
+        .progress-fill {
+            height: 100%;
+            background: linear-gradient(45deg, #667eea, #764ba2);
+            width: 0%;
+            border-radius: 3px;
+            transition: width 0.3s ease;
+        }
+
+        .stats {
+            display: flex;
+            justify-content: space-around;
             margin-top: 20px;
-            border: 1px solid #ccc;
-            display: block; /* 初期状態では表示しない */
+            padding: 20px;
+            background: rgba(102, 126, 234, 0.1);
+            border-radius: 15px;
+        }
+
+        .stat-item {
+            text-align: center;
+        }
+
+        .stat-number {
+            font-size: 2rem;
+            font-weight: bold;
+            color: #667eea;
+        }
+
+        .stat-label {
+            color: #666;
+            font-size: 0.9rem;
+        }
+
+        @media (max-width: 768px) {
+            .container {
+                padding: 20px;
+            }
+
+            h1 {
+                font-size: 2rem;
+            }
+
+            .upload-area {
+                padding: 40px 20px;
+            }
+
+            .preview-container {
+                grid-template-columns: 1fr;
+            }
         }
     </style>
 </head>
 <body>
-    <h1>パスポート写真アップロード</h1>
-    <form id="uploadForm">
-        <input type="file" id="photoInput" accept="image/jpeg, image/png">
-        <p>※ JPEGまたはPNG形式、背景は白でお願いします。</p>
-        <img id="preview" src="#" alt="選択された画像プレビュー" style="display: none;">
-        <button type="submit">アップロード</button>
-    </form>
-    <div id="message"></div>
+    <div class="container">
+        <h1>📸 Photo Upload</h1>
+        
+        <div class="upload-area" id="uploadArea">
+            <div class="upload-icon">☁️</div>
+            <div class="upload-text">写真をドラッグ&ドロップ</div>
+            <div class="upload-subtext">または</div>
+            <button class="btn" onclick="document.getElementById('fileInput').click()">
+                ファイルを選択
+            </button>
+        </div>
+
+        <input type="file" id="fileInput" multiple accept="image/*">
+        
+        <div class="progress-bar" id="progressBar" style="display: none;">
+            <div class="progress-fill" id="progressFill"></div>
+        </div>
+
+        <div class="stats" id="stats" style="display: none;">
+            <div class="stat-item">
+                <div class="stat-number" id="totalImages">0</div>
+                <div class="stat-label">画像数</div>
+            </div>
+            <div class="stat-item">
+                <div class="stat-number" id="totalSize">0 KB</div>
+                <div class="stat-label">合計サイズ</div>
+            </div>
+        </div>
+
+        <div class="preview-container" id="previewContainer"></div>
+
+        <button class="btn" id="clearAll" onclick="clearAllImages()" style="display: none;">
+            すべてクリア
+        </button>
+    </div>
 
     <script>
-        const photoInput = document.getElementById('photoInput');
-        const preview = document.getElementById('preview');
-        const uploadForm = document.getElementById('uploadForm');
-        const messageDiv = document.getElementById('message');
+        let uploadedImages = [];
+        let totalSize = 0;
 
-        photoInput.addEventListener('change', function(event) {
-            const file = event.target.files[0];
+        // DOM要素の取得
+        const uploadArea = document.getElementById('uploadArea');
+        const fileInput = document.getElementById('fileInput');
+        const previewContainer = document.getElementById('previewContainer');
+        const progressBar = document.getElementById('progressBar');
+        const progressFill = document.getElementById('progressFill');
+        const stats = document.getElementById('stats');
+        const totalImagesEl = document.getElementById('totalImages');
+        const totalSizeEl = document.getElementById('totalSize');
+        const clearAllBtn = document.getElementById('clearAll');
 
-            if (file) {
-                // ファイル形式のチェック
-                const allowedTypes = ['image/jpeg', 'image/png'];
-                if (!allowedTypes.includes(file.type)) {
-                    messageDiv.textContent = 'エラー: JPEGまたはPNGファイルを選択してください。';
-                    preview.style.display = 'none';
-                    preview.src = '#';
-                    photoInput.value = ''; // ファイル選択をクリア
-                    return;
-                }
-
-                // ファイルサイズのチェック (例: 5MBまで)
-                const maxSize = 5 * 1024 * 1024; // 5MB
-                if (file.size > maxSize) {
-                    messageDiv.textContent = 'エラー: ファイルサイズが大きすぎます（5MBまで）。';
-                    preview.style.display = 'none';
-                    preview.src = '#';
-                    photoInput.value = '';
-                    return;
-                }
-
-                // プレビュー表示
-                const reader = new FileReader();
-                reader.onload = function(e) {
-                    preview.src = e.target.result;
-                    preview.style.display = 'block';
-                    messageDiv.textContent = ''; // エラーメッセージをクリア
-                };
-                reader.readAsDataURL(file);
-            } else {
-                preview.style.display = 'none';
-                preview.src = '#';
-                messageDiv.textContent = '';
-            }
+        // ドラッグ&ドロップのイベントリスナー
+        uploadArea.addEventListener('dragover', (e) => {
+            e.preventDefault();
+            uploadArea.classList.add('dragover');
         });
 
-        uploadForm.addEventListener('submit', async function(event) {
-            event.preventDefault(); // フォームのデフォルト送信を防止
+        uploadArea.addEventListener('dragleave', (e) => {
+            e.preventDefault();
+            uploadArea.classList.remove('dragover');
+        });
 
-            const file = photoInput.files[0];
-            if (!file) {
-                messageDiv.textContent = '画像を選択してください。';
+        uploadArea.addEventListener('drop', (e) => {
+            e.preventDefault();
+            uploadArea.classList.remove('dragover');
+            const files = Array.from(e.dataTransfer.files);
+            handleFiles(files);
+        });
+
+        // ファイル選択のイベントリスナー
+        fileInput.addEventListener('change', (e) => {
+            const files = Array.from(e.target.files);
+            handleFiles(files);
+        });
+
+        // ファイル処理メイン関数
+        function handleFiles(files) {
+            const imageFiles = files.filter(file => file.type.startsWith('image/'));
+            
+            if (imageFiles.length === 0) {
+                alert('画像ファイルを選択してください。');
                 return;
             }
 
-            // FormDataを作成し、ファイルを添付
-            const formData = new FormData();
-            formData.append('passportPhoto', file); // 'passportPhoto'はサーバー側で受け取るフィールド名
+            showProgress();
+            
+            imageFiles.forEach((file, index) => {
+                setTimeout(() => {
+                    processImage(file);
+                    updateProgress((index + 1) / imageFiles.length * 100);
+                    
+                    if (index === imageFiles.length - 1) {
+                        hideProgress();
+                    }
+                }, index * 200);
+            });
+        }
 
-            try {
-                // サーバーに画像をアップロード
-                const response = await fetch('/upload', { // バックエンドのアップロードURL
-                    method: 'POST',
-                    body: formData,
-                });
+        // 画像処理関数
+        function processImage(file) {
+            const reader = new FileReader();
+            
+            reader.onload = (e) => {
+                const imageData = {
+                    id: Date.now() + Math.random(),
+                    src: e.target.result,
+                    name: file.name,
+                    size: file.size,
+                    type: file.type
+                };
 
-                if (response.ok) {
-                    const data = await response.json();
-                    messageDiv.textContent = 'アップロード成功: ' + data.message;
-                    // フォームをリセットするなど
-                    photoInput.value = '';
-                    preview.style.display = 'none';
-                    preview.src = '#';
-                } else {
-                    const errorData = await response.json();
-                    messageDiv.textContent = 'アップロード失敗: ' + errorData.message;
+                uploadedImages.push(imageData);
+                totalSize += file.size;
+                
+                createImagePreview(imageData);
+                updateStats();
+            };
+
+            reader.readAsDataURL(file);
+        }
+
+        // プレビュー作成関数
+        function createImagePreview(imageData) {
+            const previewDiv = document.createElement('div');
+            previewDiv.className = 'image-preview';
+            previewDiv.setAttribute('data-id', imageData.id);
+
+            previewDiv.innerHTML = `
+                <img src="${imageData.src}" alt="${imageData.name}">
+                <button class="delete-btn" onclick="deleteImage(${imageData.id})">&times;</button>
+                <div class="image-info">
+                    <div><strong>${imageData.name}</strong></div>
+                    <div>${formatFileSize(imageData.size)}</div>
+                </div>
+            `;
+
+            previewContainer.appendChild(previewDiv);
+            
+            // アニメーション効果
+            setTimeout(() => {
+                previewDiv.style.opacity = '0';
+                previewDiv.style.transform = 'scale(0.8)';
+                previewDiv.style.transition = 'all 0.3s ease';
+                
+                setTimeout(() => {
+                    previewDiv.style.opacity = '1';
+                    previewDiv.style.transform = 'scale(1)';
+                }, 10);
+            }, 10);
+        }
+
+        // 画像削除関数
+        function deleteImage(imageId) {
+            const imageIndex = uploadedImages.findIndex(img => img.id === imageId);
+            if (imageIndex !== -1) {
+                totalSize -= uploadedImages[imageIndex].size;
+                uploadedImages.splice(imageIndex, 1);
+                
+                const previewElement = document.querySelector(`[data-id="${imageId}"]`);
+                if (previewElement) {
+                    previewElement.style.transform = 'scale(0)';
+                    previewElement.style.opacity = '0';
+                    setTimeout(() => {
+                        previewElement.remove();
+                    }, 300);
                 }
-            } catch (error) {
-                console.error('通信エラー:', error);
-                messageDiv.textContent = 'エラーが発生しました。ネットワーク接続を確認してください。';
+                
+                updateStats();
             }
+        }
+
+        // 全削除関数
+        function clearAllImages() {
+            if (uploadedImages.length === 0) return;
+            
+            if (confirm('すべての画像を削除しますか？')) {
+                uploadedImages = [];
+                totalSize = 0;
+                previewContainer.innerHTML = '';
+                updateStats();
+            }
+        }
+
+        // 統計更新関数
+        function updateStats() {
+            if (uploadedImages.length > 0) {
+                stats.style.display = 'flex';
+                clearAllBtn.style.display = 'inline-block';
+                totalImagesEl.textContent = uploadedImages.length;
+                totalSizeEl.textContent = formatFileSize(totalSize);
+            } else {
+                stats.style.display = 'none';
+                clearAllBtn.style.display = 'none';
+            }
+        }
+
+        // プログレスバー表示
+        function showProgress() {
+            progressBar.style.display = 'block';
+            progressFill.style.width = '0%';
+        }
+
+        // プログレスバー更新
+        function updateProgress(percent) {
+            progressFill.style.width = percent + '%';
+        }
+
+        // プログレスバー非表示
+        function hideProgress() {
+            setTimeout(() => {
+                progressBar.style.display = 'none';
+            }, 500);
+        }
+
+        // ファイルサイズフォーマット関数
+        function formatFileSize(bytes) {
+            if (bytes === 0) return '0 Bytes';
+            const k = 1024;
+            const sizes = ['Bytes', 'KB', 'MB', 'GB'];
+            const i = Math.floor(Math.log(bytes) / Math.log(k));
+            return parseFloat((bytes / Math.pow(k, i)).toFixed(2)) + ' ' + sizes[i];
+        }
+
+        // ページ読み込み時のアニメーション
+        document.addEventListener('DOMContentLoaded', () => {
+            const container = document.querySelector('.container');
+            container.style.opacity = '0';
+            container.style.transform = 'translateY(20px)';
+            container.style.transition = 'all 0.6s ease';
+            
+            setTimeout(() => {
+                container.style.opacity = '1';
+                container.style.transform = 'translateY(0)';
+            }, 100);
         });
     </script>
 </body>
