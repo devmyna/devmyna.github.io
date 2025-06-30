@@ -125,6 +125,36 @@
             object-fit: cover;
         }
 
+        .crop-controls {
+            position: absolute;
+            top: 10px;
+            left: 10px;
+            display: flex;
+            gap: 5px;
+        }
+
+        .crop-btn {
+            background: rgba(255, 255, 255, 0.9);
+            border: none;
+            border-radius: 15px;
+            padding: 5px 10px;
+            font-size: 0.8rem;
+            cursor: pointer;
+            transition: all 0.3s ease;
+            color: #667eea;
+            font-weight: 500;
+        }
+
+        .crop-btn:hover {
+            background: #667eea;
+            color: white;
+        }
+
+        .crop-btn.active {
+            background: #667eea;
+            color: white;
+        }
+
         .image-info {
             position: absolute;
             bottom: 0;
@@ -201,6 +231,89 @@
             font-size: 0.9rem;
         }
 
+        .form-section {
+            display: grid;
+            grid-template-columns: 1fr 1fr 1fr;
+            gap: 20px;
+            margin-bottom: 30px;
+        }
+
+        .input-group {
+            flex: 1;
+            text-align: left;
+        }
+
+        .input-group label {
+            display: block;
+            color: #333;
+            font-weight: 500;
+            margin-bottom: 8px;
+            font-size: 1rem;
+        }
+
+        .input-group input {
+            width: 100%;
+            padding: 12px 16px;
+            border: 2px solid #e1e8ed;
+            border-radius: 10px;
+            font-size: 1rem;
+            transition: all 0.3s ease;
+            background: rgba(255, 255, 255, 0.8);
+        }
+
+        .input-group select {
+            width: 100%;
+            padding: 12px 16px;
+            border: 2px solid #e1e8ed;
+            border-radius: 10px;
+            font-size: 1rem;
+            transition: all 0.3s ease;
+            background: rgba(255, 255, 255, 0.8);
+            cursor: pointer;
+            appearance: none;
+            background-image: url("data:image/svg+xml,%3csvg xmlns='http://www.w3.org/2000/svg' fill='none' viewBox='0 0 20 20'%3e%3cpath stroke='%236b7280' stroke-linecap='round' stroke-linejoin='round' stroke-width='1.5' d='M6 8l4 4 4-4'/%3e%3c/svg%3e");
+            background-position: right 12px center;
+            background-repeat: no-repeat;
+            background-size: 16px;
+            padding-right: 40px;
+        }
+
+        .input-group input:focus,
+        .input-group select:focus {
+            outline: none;
+            border-color: #667eea;
+            background: rgba(255, 255, 255, 1);
+            box-shadow: 0 0 0 3px rgba(102, 126, 234, 0.1);
+        }
+
+        .input-group input:valid,
+        .input-group select:valid {
+            border-color: #2ed573;
+        }
+
+        .submit-section {
+            margin-top: 30px;
+            padding-top: 20px;
+            border-top: 1px solid rgba(102, 126, 234, 0.2);
+        }
+
+        .submit-btn {
+            background: linear-gradient(45deg, #2ed573, #17d35e);
+            font-size: 1.1rem;
+            padding: 15px 40px;
+        }
+
+        .submit-btn:hover {
+            box-shadow: 0 10px 20px rgba(46, 213, 115, 0.3);
+        }
+
+        .submit-btn:disabled {
+            background: #ccc;
+            cursor: not-allowed;
+            transform: none;
+            box-shadow: none;
+        }
+
         @media (max-width: 768px) {
             .container {
                 padding: 20px;
@@ -217,12 +330,38 @@
             .preview-container {
                 grid-template-columns: 1fr;
             }
+
+            .form-section {
+                grid-template-columns: 1fr;
+                gap: 15px;
+            }
         }
     </style>
 </head>
 <body>
     <div class="container">
         <h1>📸 Photo Upload</h1>
+        
+        <div class="form-section">
+            <div class="input-group">
+                <label for="lastName">苗字 *</label>
+                <input type="text" id="lastName" placeholder="山田" required>
+            </div>
+            <div class="input-group">
+                <label for="firstName">名前 *</label>
+                <input type="text" id="firstName" placeholder="太郎" required>
+            </div>
+            <div class="input-group">
+                <label for="grade">学年 *</label>
+                <select id="grade" required>
+                    <option value="">学年を選択してください</option>
+                    <option value="ほし">ほし</option>
+                    <option value="めばえ">めばえ</option>
+                    <option value="年中">年中</option>
+                    <option value="年長">年長</option>
+                </select>
+            </div>
+        </div>
         
         <div class="upload-area" id="uploadArea">
             <div class="upload-icon">☁️</div>
@@ -255,6 +394,12 @@
         <button class="btn" id="clearAll" onclick="clearAllImages()" style="display: none;">
             すべてクリア
         </button>
+
+        <div class="submit-section">
+            <button class="btn submit-btn" id="submitBtn" onclick="submitForm()">
+                📤 送信する
+            </button>
+        </div>
     </div>
 
     <script>
@@ -271,6 +416,10 @@
         const totalImagesEl = document.getElementById('totalImages');
         const totalSizeEl = document.getElementById('totalSize');
         const clearAllBtn = document.getElementById('clearAll');
+        const lastNameInput = document.getElementById('lastName');
+        const firstNameInput = document.getElementById('firstName');
+        const gradeSelect = document.getElementById('grade');
+        const submitBtn = document.getElementById('submitBtn');
 
         // ドラッグ&ドロップのイベントリスナー
         uploadArea.addEventListener('dragover', (e) => {
@@ -295,6 +444,11 @@
             const files = Array.from(e.target.files);
             handleFiles(files);
         });
+
+        // フォーム入力のイベントリスナー
+        lastNameInput.addEventListener('input', updateSubmitButton);
+        firstNameInput.addEventListener('input', updateSubmitButton);
+        gradeSelect.addEventListener('change', updateSubmitButton);
 
         // ファイル処理メイン関数
         function handleFiles(files) {
@@ -324,22 +478,75 @@
             const reader = new FileReader();
             
             reader.onload = (e) => {
-                const imageData = {
-                    id: Date.now() + Math.random(),
-                    src: e.target.result,
-                    name: file.name,
-                    size: file.size,
-                    type: file.type
-                };
-
-                uploadedImages.push(imageData);
-                totalSize += file.size;
+                const originalSrc = e.target.result;
                 
-                createImagePreview(imageData);
-                updateStats();
+                // 4:3にクロップした画像を生成
+                cropImageTo4x3(originalSrc, (croppedSrc) => {
+                    const imageData = {
+                        id: Date.now() + Math.random(),
+                        originalSrc: originalSrc,
+                        croppedSrc: croppedSrc,
+                        currentSrc: croppedSrc, // 現在表示している画像
+                        isCropped: true,
+                        name: file.name,
+                        size: file.size,
+                        type: file.type
+                    };
+
+                    uploadedImages.push(imageData);
+                    totalSize += file.size;
+                    
+                    createImagePreview(imageData);
+                    updateStats();
+                });
             };
 
             reader.readAsDataURL(file);
+        }
+
+        // 4:3クロップ関数
+        function cropImageTo4x3(imageSrc, callback) {
+            const img = new Image();
+            img.onload = function() {
+                const canvas = document.createElement('canvas');
+                const ctx = canvas.getContext('2d');
+                
+                const originalWidth = img.width;
+                const originalHeight = img.height;
+                const targetRatio = 4 / 3;
+                
+                let sourceWidth, sourceHeight, sourceX, sourceY;
+                
+                if (originalWidth / originalHeight > targetRatio) {
+                    // 横長の場合、高さを基準にして幅を調整
+                    sourceHeight = originalHeight;
+                    sourceWidth = originalHeight * targetRatio;
+                    sourceX = (originalWidth - sourceWidth) / 2;
+                    sourceY = 0;
+                } else {
+                    // 縦長の場合、幅を基準にして高さを調整
+                    sourceWidth = originalWidth;
+                    sourceHeight = originalWidth / targetRatio;
+                    sourceX = 0;
+                    sourceY = (originalHeight - sourceHeight) / 2;
+                }
+                
+                // キャンバスサイズを4:3比率に設定
+                const canvasWidth = 400;
+                const canvasHeight = 300;
+                canvas.width = canvasWidth;
+                canvas.height = canvasHeight;
+                
+                // 画像を描画
+                ctx.drawImage(
+                    img,
+                    sourceX, sourceY, sourceWidth, sourceHeight,
+                    0, 0, canvasWidth, canvasHeight
+                );
+                
+                callback(canvas.toDataURL('image/jpeg', 0.9));
+            };
+            img.src = imageSrc;
         }
 
         // プレビュー作成関数
@@ -349,11 +556,15 @@
             previewDiv.setAttribute('data-id', imageData.id);
 
             previewDiv.innerHTML = `
-                <img src="${imageData.src}" alt="${imageData.name}">
+                <img src="${imageData.currentSrc}" alt="${imageData.name}">
+                <div class="crop-controls">
+                    <button class="crop-btn ${imageData.isCropped ? 'active' : ''}" onclick="toggleCrop(${imageData.id}, true)">4:3</button>
+                    <button class="crop-btn ${!imageData.isCropped ? 'active' : ''}" onclick="toggleCrop(${imageData.id}, false)">元</button>
+                </div>
                 <button class="delete-btn" onclick="deleteImage(${imageData.id})">&times;</button>
                 <div class="image-info">
                     <div><strong>${imageData.name}</strong></div>
-                    <div>${formatFileSize(imageData.size)}</div>
+                    <div>${formatFileSize(imageData.size)} ${imageData.isCropped ? '(4:3)' : '(元画像)'}</div>
                 </div>
             `;
 
@@ -370,6 +581,36 @@
                     previewDiv.style.transform = 'scale(1)';
                 }, 10);
             }, 10);
+        }
+
+        // クロップ切り替え関数
+        function toggleCrop(imageId, shouldCrop) {
+            const imageIndex = uploadedImages.findIndex(img => img.id === imageId);
+            if (imageIndex === -1) return;
+            
+            const imageData = uploadedImages[imageIndex];
+            const previewElement = document.querySelector(`[data-id="${imageId}"]`);
+            const imgElement = previewElement.querySelector('img');
+            const infoElement = previewElement.querySelector('.image-info div:last-child');
+            const cropButtons = previewElement.querySelectorAll('.crop-btn');
+            
+            if (shouldCrop) {
+                imageData.currentSrc = imageData.croppedSrc;
+                imageData.isCropped = true;
+                imgElement.src = imageData.croppedSrc;
+                infoElement.textContent = `${formatFileSize(imageData.size)} (4:3)`;
+                cropButtons[0].classList.add('active');
+                cropButtons[1].classList.remove('active');
+            } else {
+                imageData.currentSrc = imageData.originalSrc;
+                imageData.isCropped = false;
+                imgElement.src = imageData.originalSrc;
+                infoElement.textContent = `${formatFileSize(imageData.size)} (元画像)`;
+                cropButtons[0].classList.remove('active');
+                cropButtons[1].classList.add('active');
+            }
+            
+            uploadedImages[imageIndex] = imageData;
         }
 
         // 画像削除関数
@@ -415,6 +656,89 @@
                 stats.style.display = 'none';
                 clearAllBtn.style.display = 'none';
             }
+            updateSubmitButton();
+        }
+
+        // 送信ボタンの状態更新
+        function updateSubmitButton() {
+            const lastName = lastNameInput.value.trim();
+            const firstName = firstNameInput.value.trim();
+            const grade = gradeSelect.value;
+            const hasImages = uploadedImages.length > 0;
+            
+            if (lastName && firstName && grade && hasImages) {
+                submitBtn.disabled = false;
+                submitBtn.textContent = '📤 送信する';
+            } else {
+                submitBtn.disabled = true;
+                if (!lastName || !firstName) {
+                    submitBtn.textContent = '📝 名前を入力してください';
+                } else if (!grade) {
+                    submitBtn.textContent = '🎓 学年を選択してください';
+                } else if (!hasImages) {
+                    submitBtn.textContent = '📸 写真を追加してください';
+                }
+            }
+        }
+
+        // フォーム送信関数
+        function submitForm() {
+            const lastName = lastNameInput.value.trim();
+            const firstName = firstNameInput.value.trim();
+            const grade = gradeSelect.value;
+            
+            if (!lastName || !firstName) {
+                alert('苗字と名前を入力してください。');
+                return;
+            }
+            
+            if (!grade) {
+                alert('学年を選択してください。');
+                return;
+            }
+            
+            if (uploadedImages.length === 0) {
+                alert('写真を追加してください。');
+                return;
+            }
+
+            // 送信データの準備
+            const formData = {
+                lastName: lastName,
+                firstName: firstName,
+                fullName: lastName + ' ' + firstName,
+                grade: grade,
+                images: uploadedImages.map(img => ({
+                    name: img.name,
+                    size: img.size,
+                    type: img.type,
+                    isCropped: img.isCropped,
+                    src: img.currentSrc // 現在選択されている画像（クロップ済みまたは元画像）
+                })),
+                totalImages: uploadedImages.length,
+                totalSize: totalSize,
+                timestamp: new Date().toISOString()
+            };
+
+            // 実際のサーバー送信処理をここに実装
+            console.log('送信データ:', formData);
+            
+            // 送信成功のメッセージ
+            alert(`${formData.fullName}様（${formData.grade}）\n${uploadedImages.length}枚の写真を送信しました！\n\n送信データ:\n- 名前: ${formData.fullName}\n- 学年: ${formData.grade}\n- 画像数: ${formData.totalImages}枚\n- 合計サイズ: ${formatFileSize(formData.totalSize)}`);
+            
+            // フォームリセット（オプション）
+            // resetForm();
+        }
+
+        // フォームリセット関数
+        function resetForm() {
+            lastNameInput.value = '';
+            firstNameInput.value = '';
+            gradeSelect.value = '';
+            uploadedImages = [];
+            totalSize = 0;
+            previewContainer.innerHTML = '';
+            updateStats();
         }
 
         // プログレスバー表示
@@ -455,6 +779,9 @@
                 container.style.opacity = '1';
                 container.style.transform = 'translateY(0)';
             }, 100);
+            
+            // 初期状態で送信ボタンを無効化
+            updateSubmitButton();
         });
     </script>
 </body>
