@@ -1,0 +1,1074 @@
+<!DOCTYPE html>
+<html lang="ja">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Photo Upload - 写真アップロード</title>
+    <style>
+        * {
+            margin: 0;
+            padding: 0;
+            box-sizing: border-box;
+        }
+
+        body {
+            font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif;
+            background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+            min-height: 100vh;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            padding: 20px;
+        }
+
+        .container {
+            background: rgba(255, 255, 255, 0.95);
+            backdrop-filter: blur(10px);
+            border-radius: 20px;
+            padding: 40px;
+            box-shadow: 0 20px 40px rgba(0, 0, 0, 0.1);
+            width: 100%;
+            max-width: 600px;
+            text-align: center;
+        }
+
+        h1 {
+            color: #333;
+            margin-bottom: 30px;
+            font-size: 2.5rem;
+            font-weight: 300;
+        }
+
+        .upload-area {
+            border: 3px dashed #667eea;
+            border-radius: 15px;
+            padding: 60px 20px;
+            margin: 30px 0;
+            transition: all 0.3s ease;
+            cursor: pointer;
+            position: relative;
+            overflow: hidden;
+        }
+
+        .upload-area:hover {
+            border-color: #764ba2;
+            background: rgba(102, 126, 234, 0.05);
+            transform: translateY(-2px);
+        }
+
+        .upload-area.dragover {
+            border-color: #764ba2;
+            background: rgba(102, 126, 234, 0.1);
+            transform: scale(1.02);
+        }
+
+        .upload-icon {
+            font-size: 4rem;
+            color: #667eea;
+            margin-bottom: 20px;
+        }
+
+        .upload-text {
+            color: #666;
+            font-size: 1.2rem;
+            margin-bottom: 10px;
+        }
+
+        .upload-subtext {
+            color: #999;
+            font-size: 0.9rem;
+        }
+
+        #fileInput {
+            display: none;
+        }
+
+        .btn {
+            background: linear-gradient(45deg, #667eea, #764ba2);
+            color: white;
+            border: none;
+            padding: 12px 30px;
+            border-radius: 25px;
+            font-size: 1rem;
+            cursor: pointer;
+            transition: all 0.3s ease;
+            margin: 10px;
+        }
+
+        .btn:hover {
+            transform: translateY(-2px);
+            box-shadow: 0 10px 20px rgba(102, 126, 234, 0.3);
+        }
+
+        .preview-container {
+            margin-top: 30px;
+            display: grid;
+            grid-template-columns: repeat(auto-fill, minmax(200px, 1fr));
+            gap: 20px;
+        }
+
+        .image-preview {
+            position: relative;
+            border-radius: 15px;
+            overflow: hidden;
+            box-shadow: 0 10px 20px rgba(0, 0, 0, 0.1);
+            transition: transform 0.3s ease;
+        }
+
+        .image-preview:hover {
+            transform: scale(1.05);
+        }
+
+        .image-preview img {
+            width: 100%;
+            height: 200px;
+            object-fit: contain;
+            background-color: #f5f5f5;
+        }
+
+        .crop-controls {
+            position: absolute;
+            top: 10px;
+            left: 10px;
+            display: flex;
+            gap: 5px;
+        }
+
+        .crop-btn {
+            background: rgba(255, 255, 255, 0.9);
+            border: none;
+            border-radius: 15px;
+            padding: 5px 10px;
+            font-size: 0.8rem;
+            cursor: pointer;
+            transition: all 0.3s ease;
+            color: #667eea;
+            font-weight: 500;
+        }
+
+        .crop-btn:hover {
+            background: #667eea;
+            color: white;
+        }
+
+        .crop-btn.active {
+            background: #667eea;
+            color: white;
+        }
+
+        .image-info {
+            position: absolute;
+            bottom: 0;
+            left: 0;
+            right: 0;
+            background: linear-gradient(transparent, rgba(0, 0, 0, 0.7));
+            color: white;
+            padding: 20px 15px 15px;
+            font-size: 0.9rem;
+        }
+
+        .delete-btn {
+            position: absolute;
+            top: 10px;
+            right: 10px;
+            background: rgba(255, 255, 255, 0.9);
+            border: none;
+            border-radius: 50%;
+            width: 30px;
+            height: 30px;
+            cursor: pointer;
+            font-size: 1.2rem;
+            color: #ff4757;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            transition: all 0.3s ease;
+        }
+
+        .delete-btn:hover {
+            background: #ff4757;
+            color: white;
+            transform: scale(1.1);
+        }
+
+        .progress-bar {
+            width: 100%;
+            height: 6px;
+            background: rgba(102, 126, 234, 0.2);
+            border-radius: 3px;
+            margin: 20px 0;
+            overflow: hidden;
+        }
+
+        .progress-fill {
+            height: 100%;
+            background: linear-gradient(45deg, #667eea, #764ba2);
+            width: 0%;
+            border-radius: 3px;
+            transition: width 0.3s ease;
+        }
+
+        .stats {
+            display: flex;
+            justify-content: space-around;
+            margin-top: 20px;
+            padding: 20px;
+            background: rgba(102, 126, 234, 0.1);
+            border-radius: 15px;
+        }
+
+        .stat-item {
+            text-align: center;
+        }
+
+        .stat-number {
+            font-size: 2rem;
+            font-weight: bold;
+            color: #667eea;
+        }
+
+        .stat-label {
+            color: #666;
+            font-size: 0.9rem;
+        }
+
+        .form-section {
+            display: grid;
+            grid-template-columns: 1fr 1fr 1fr;
+            gap: 20px;
+            margin-bottom: 30px;
+        }
+
+        .input-group {
+            flex: 1;
+            text-align: left;
+        }
+
+        .input-group label {
+            display: block;
+            color: #333;
+            font-weight: 500;
+            margin-bottom: 8px;
+            font-size: 1rem;
+        }
+
+        .input-group input {
+            width: 100%;
+            padding: 12px 16px;
+            border: 2px solid #e1e8ed;
+            border-radius: 10px;
+            font-size: 1rem;
+            transition: all 0.3s ease;
+            background: rgba(255, 255, 255, 0.8);
+        }
+
+        .input-group select {
+            width: 100%;
+            padding: 12px 16px;
+            border: 2px solid #e1e8ed;
+            border-radius: 10px;
+            font-size: 1rem;
+            transition: all 0.3s ease;
+            background: rgba(255, 255, 255, 0.8);
+            cursor: pointer;
+            appearance: none;
+            background-image: url("data:image/svg+xml,%3csvg xmlns='http://www.w3.org/2000/svg' fill='none' viewBox='0 0 20 20'%3e%3cpath stroke='%236b7280' stroke-linecap='round' stroke-linejoin='round' stroke-width='1.5' d='M6 8l4 4 4-4'/%3e%3c/svg%3e");
+            background-position: right 12px center;
+            background-repeat: no-repeat;
+            background-size: 16px;
+            padding-right: 40px;
+        }
+
+        .input-group input:focus,
+        .input-group select:focus {
+            outline: none;
+            border-color: #667eea;
+            background: rgba(255, 255, 255, 1);
+            box-shadow: 0 0 0 3px rgba(102, 126, 234, 0.1);
+        }
+
+        .input-group input:valid,
+        .input-group select:valid {
+            border-color: #2ed573;
+        }
+
+        .submit-section {
+            margin-top: 30px;
+            padding-top: 20px;
+            border-top: 1px solid rgba(102, 126, 234, 0.2);
+        }
+
+        .submit-btn {
+            background: linear-gradient(45deg, #2ed573, #17d35e);
+            font-size: 1.1rem;
+            padding: 15px 40px;
+        }
+
+        .submit-btn:hover {
+            box-shadow: 0 10px 20px rgba(46, 213, 115, 0.3);
+        }
+
+        .submit-btn:disabled {
+            background: #ccc;
+            cursor: not-allowed;
+            transform: none;
+            box-shadow: none;
+        }
+
+        @media (max-width: 768px) {
+            .container {
+                padding: 20px;
+            }
+
+            h1 {
+                font-size: 2rem;
+            }
+
+            .upload-area {
+                padding: 40px 20px;
+            }
+
+            .preview-container {
+                grid-template-columns: 1fr;
+            }
+
+            .form-section {
+                grid-template-columns: 1fr;
+                gap: 15px;
+            }
+        }
+    </style>
+</head>
+<body>
+    <div class="container">
+        <h1>📸 Photo Upload</h1>
+        
+        <div class="form-section">
+            <div class="input-group">
+                <label for="lastName">苗字 *</label>
+                <input type="text" id="lastName" placeholder="山田" required>
+            </div>
+            <div class="input-group">
+                <label for="firstName">名前 *</label>
+                <input type="text" id="firstName" placeholder="太郎" required>
+            </div>
+            <div class="input-group">
+                <label for="grade">学年 *</label>
+                <select id="grade" required>
+                    <option value="">学年を選択してください</option>
+                    <option value="ほし">ほし</option>
+                    <option value="めばえ">めばえ</option>
+                    <option value="年中">年中</option>
+                    <option value="年長">年長</option>
+                </select>
+            </div>
+        </div>
+        
+        <div class="upload-area" id="uploadArea">
+            <div class="upload-icon">☁️</div>
+            <div class="upload-text">写真をドラッグ&ドロップ</div>
+            <div class="upload-subtext">または</div>
+            <button class="btn" onclick="document.getElementById('fileInput').click()">
+                ファイルを選択
+            </button>
+        </div>
+
+        <input type="file" id="fileInput" multiple accept="image/*">
+        
+        <div class="progress-bar" id="progressBar" style="display: none;">
+            <div class="progress-fill" id="progressFill"></div>
+        </div>
+
+        <div class="stats" id="stats" style="display: none;">
+            <div class="stat-item">
+                <div class="stat-number" id="totalImages">0</div>
+                <div class="stat-label">画像数</div>
+            </div>
+            <div class="stat-item">
+                <div class="stat-number" id="totalSize">0 KB</div>
+                <div class="stat-label">合計サイズ</div>
+            </div>
+        </div>
+
+        <div class="preview-container" id="previewContainer"></div>
+
+        <button class="btn" id="clearAll" onclick="clearAllImages()" style="display: none;">
+            すべてクリア
+        </button>
+
+        <div class="submit-section">
+            <button class="btn submit-btn" id="submitBtn" onclick="submitForm()">
+                📤 送信する
+            </button>
+        </div>
+    </div>
+
+    <script>
+        let uploadedImages = [];
+        let totalSize = 0;
+
+        // DOM要素の取得
+        const uploadArea = document.getElementById('uploadArea');
+        const fileInput = document.getElementById('fileInput');
+        const previewContainer = document.getElementById('previewContainer');
+        const progressBar = document.getElementById('progressBar');
+        const progressFill = document.getElementById('progressFill');
+        const stats = document.getElementById('stats');
+        const totalImagesEl = document.getElementById('totalImages');
+        const totalSizeEl = document.getElementById('totalSize');
+        const clearAllBtn = document.getElementById('clearAll');
+        const lastNameInput = document.getElementById('lastName');
+        const firstNameInput = document.getElementById('firstName');
+        const gradeSelect = document.getElementById('grade');
+        const submitBtn = document.getElementById('submitBtn');
+
+        // ドラッグ&ドロップのイベントリスナー
+        uploadArea.addEventListener('dragover', (e) => {
+            e.preventDefault();
+            uploadArea.classList.add('dragover');
+        });
+
+        uploadArea.addEventListener('dragleave', (e) => {
+            e.preventDefault();
+            uploadArea.classList.remove('dragover');
+        });
+
+        uploadArea.addEventListener('drop', (e) => {
+            e.preventDefault();
+            uploadArea.classList.remove('dragover');
+            const files = Array.from(e.dataTransfer.files);
+            handleFiles(files);
+        });
+
+        // ファイル選択のイベントリスナー
+        fileInput.addEventListener('change', (e) => {
+            const files = Array.from(e.target.files);
+            handleFiles(files);
+        });
+
+        // フォーム入力のイベントリスナー
+        lastNameInput.addEventListener('input', updateSubmitButton);
+        firstNameInput.addEventListener('input', updateSubmitButton);
+        gradeSelect.addEventListener('change', updateSubmitButton);
+
+        // ファイル処理メイン関数
+        function handleFiles(files) {
+            const imageFiles = files.filter(file => file.type.startsWith('image/'));
+            
+            if (imageFiles.length === 0) {
+                alert('画像ファイルを選択してください。');
+                return;
+            }
+
+            showProgress();
+            
+            imageFiles.forEach((file, index) => {
+                setTimeout(() => {
+                    processImage(file);
+                    updateProgress((index + 1) / imageFiles.length * 100);
+                    
+                    if (index === imageFiles.length - 1) {
+                        hideProgress();
+                    }
+                }, index * 200);
+            });
+        }
+
+        // 画像処理関数
+        function processImage(file) {
+            const reader = new FileReader();
+            
+            reader.onload = (e) => {
+                const originalSrc = e.target.result;
+                
+                // 3:4にクロップした画像を生成（顔認識付き）
+                cropImageTo3x4WithFaceDetection(originalSrc, (croppedSrc) => {
+                    const imageData = {
+                        id: Date.now() + Math.random(),
+                        originalSrc: originalSrc,
+                        croppedSrc: croppedSrc,
+                        currentSrc: croppedSrc, // 現在表示している画像
+                        isCropped: true,
+                        name: file.name,
+                        size: file.size,
+                        type: file.type
+                    };
+
+                    uploadedImages.push(imageData);
+                    totalSize += file.size;
+                    
+                    createImagePreview(imageData);
+                    updateStats();
+                });
+            };
+
+            reader.readAsDataURL(file);
+        }
+
+        // 顔認識付き3:4クロップ関数
+        function cropImageTo3x4WithFaceDetection(imageSrc, callback) {
+            const img = new Image();
+            img.onload = function() {
+                // 顔認識を試行
+                detectFaces(img).then(faces => {
+                    cropImageWithFaces(img, faces, callback);
+                }).catch(() => {
+                    // 顔認識が失敗した場合は通常のクロップ
+                    cropImageTo3x4Basic(img, callback);
+                });
+            };
+            img.src = imageSrc;
+        }
+
+        // 顔認識関数
+        function detectFaces(img) {
+            return new Promise((resolve, reject) => {
+                // Canvas APIを使用した簡易顔認識（顔の色域検出）
+                const canvas = document.createElement('canvas');
+                const ctx = canvas.getContext('2d');
+                canvas.width = img.width;
+                canvas.height = img.height;
+                ctx.drawImage(img, 0, 0);
+                
+                try {
+                    const imageData = ctx.getImageData(0, 0, canvas.width, canvas.height);
+                    const faces = findFaceRegions(imageData, canvas.width, canvas.height);
+                    
+                    if (faces.length > 0) {
+                        resolve(faces);
+                    } else {
+                        reject('No faces detected');
+                    }
+                } catch (error) {
+                    reject(error);
+                }
+            });
+        }
+
+        // 肌色域を検出して顔の候補領域を見つける関数
+        function findFaceRegions(imageData, width, height) {
+            const data = imageData.data;
+            const faces = [];
+            const skinPixels = [];
+            
+            // 肌色の検出
+            for (let i = 0; i < data.length; i += 4) {
+                const r = data[i];
+                const g = data[i + 1];
+                const b = data[i + 2];
+                
+                // 肌色の判定（簡易版）
+                if (isSkinColor(r, g, b)) {
+                    const pixelIndex = i / 4;
+                    const x = pixelIndex % width;
+                    const y = Math.floor(pixelIndex / width);
+                    skinPixels.push({ x, y });
+                }
+            }
+            
+            // 肌色ピクセルが集中している領域を顔として認識
+            if (skinPixels.length > 100) { // 最小ピクセル数
+                const clusters = clusterSkinPixels(skinPixels, width, height);
+                
+                clusters.forEach(cluster => {
+                    if (cluster.pixels.length > 500) { // 顔と判定する最小サイズ
+                        faces.push({
+                            x: cluster.centerX - cluster.width / 2,
+                            y: cluster.centerY - cluster.height / 2,
+                            width: cluster.width,
+                            height: cluster.height,
+                            centerX: cluster.centerX,
+                            centerY: cluster.centerY
+                        });
+                    }
+                });
+            }
+            
+            return faces;
+        }
+
+        // 肌色判定関数
+        function isSkinColor(r, g, b) {
+            // HSV変換による肌色判定
+            const max = Math.max(r, g, b);
+            const min = Math.min(r, g, b);
+            const diff = max - min;
+            
+            if (max === 0) return false;
+            
+            const s = diff / max;
+            let h = 0;
+            
+            if (diff !== 0) {
+                if (max === r) {
+                    h = ((g - b) / diff) % 6;
+                } else if (max === g) {
+                    h = (b - r) / diff + 2;
+                } else {
+                    h = (r - g) / diff + 4;
+                }
+                h = h * 60;
+                if (h < 0) h += 360;
+            }
+            
+            // 肌色の範囲：色相0-50度、彩度20-80%、明度30-95%
+            return (h >= 0 && h <= 50) && 
+                   (s >= 0.2 && s <= 0.8) && 
+                   (max >= 77 && max <= 242); // 明度30-95%相当
+        }
+
+        // 肌色ピクセルをクラスタリング
+        function clusterSkinPixels(pixels, imageWidth, imageHeight) {
+            const clusters = [];
+            const gridSize = Math.min(imageWidth, imageHeight) / 20; // グリッドサイズ
+            const grid = {};
+            
+            // グリッドに分割
+            pixels.forEach(pixel => {
+                const gridX = Math.floor(pixel.x / gridSize);
+                const gridY = Math.floor(pixel.y / gridSize);
+                const key = `${gridX}-${gridY}`;
+                
+                if (!grid[key]) {
+                    grid[key] = [];
+                }
+                grid[key].push(pixel);
+            });
+            
+            // 密度の高いグリッドセルを見つける
+            Object.keys(grid).forEach(key => {
+                const cellPixels = grid[key];
+                if (cellPixels.length > 20) { // 閾値
+                    const [gridX, gridY] = key.split('-').map(Number);
+                    
+                    // 周辺セルもチェックして大きなクラスターを形成
+                    const clusterPixels = [];
+                    for (let dx = -1; dx <= 1; dx++) {
+                        for (let dy = -1; dy <= 1; dy++) {
+                            const neighborKey = `${gridX + dx}-${gridY + dy}`;
+                            if (grid[neighborKey]) {
+                                clusterPixels.push(...grid[neighborKey]);
+                            }
+                        }
+                    }
+                    
+                    if (clusterPixels.length > 100) {
+                        // クラスターの中心と範囲を計算
+                        const xs = clusterPixels.map(p => p.x);
+                        const ys = clusterPixels.map(p => p.y);
+                        
+                        const minX = Math.min(...xs);
+                        const maxX = Math.max(...xs);
+                        const minY = Math.min(...ys);
+                        const maxY = Math.max(...ys);
+                        
+                        clusters.push({
+                            pixels: clusterPixels,
+                            centerX: (minX + maxX) / 2,
+                            centerY: (minY + maxY) / 2,
+                            width: maxX - minX,
+                            height: maxY - minY
+                        });
+                    }
+                }
+            });
+            
+            // 重複するクラスターを統合
+            return mergeClusters(clusters);
+        }
+
+        // クラスターを統合
+        function mergeClusters(clusters) {
+            const merged = [];
+            const used = new Set();
+            
+            clusters.forEach((cluster, i) => {
+                if (used.has(i)) return;
+                
+                let mergedCluster = { ...cluster };
+                used.add(i);
+                
+                // 近くのクラスターを統合
+                clusters.forEach((otherCluster, j) => {
+                    if (i !== j && !used.has(j)) {
+                        const distance = Math.sqrt(
+                            Math.pow(cluster.centerX - otherCluster.centerX, 2) +
+                            Math.pow(cluster.centerY - otherCluster.centerY, 2)
+                        );
+                        
+                        if (distance < Math.max(cluster.width, cluster.height)) {
+                            // 統合
+                            const allPixels = [...mergedCluster.pixels, ...otherCluster.pixels];
+                            const xs = allPixels.map(p => p.x);
+                            const ys = allPixels.map(p => p.y);
+                            
+                            const minX = Math.min(...xs);
+                            const maxX = Math.max(...xs);
+                            const minY = Math.min(...ys);
+                            const maxY = Math.max(...ys);
+                            
+                            mergedCluster = {
+                                pixels: allPixels,
+                                centerX: (minX + maxX) / 2,
+                                centerY: (minY + maxY) / 2,
+                                width: maxX - minX,
+                                height: maxY - minY
+                            };
+                            
+                            used.add(j);
+                        }
+                    }
+                });
+                
+                merged.push(mergedCluster);
+            });
+            
+            return merged.sort((a, b) => b.pixels.length - a.pixels.length); // 大きい順
+        }
+
+        // 顔の位置を考慮したクロップ
+        function cropImageWithFaces(img, faces, callback) {
+            const canvas = document.createElement('canvas');
+            const ctx = canvas.getContext('2d');
+            
+            const originalWidth = img.width;
+            const originalHeight = img.height;
+            const targetRatio = 3 / 4;
+            
+            // キャンバスサイズを3:4比率に設定
+            const canvasWidth = 300;
+            const canvasHeight = 400;
+            canvas.width = canvasWidth;
+            canvas.height = canvasHeight;
+            
+            let sourceX, sourceY, sourceWidth, sourceHeight;
+            
+            if (faces.length > 0) {
+                // 最大の顔（最も多くのピクセルを含む）を基準にする
+                const primaryFace = faces[0];
+                const faceCenterX = primaryFace.centerX;
+                const faceCenterY = primaryFace.centerY;
+                
+                // 顔を中心とした3:4のクロップ領域を計算
+                if (originalWidth / originalHeight > targetRatio) {
+                    // 横長の画像の場合
+                    sourceHeight = originalHeight;
+                    sourceWidth = originalHeight * targetRatio;
+                    sourceY = 0;
+                    
+                    // 顔の中心がクロップ領域の中心に来るように調整
+                    sourceX = faceCenterX - sourceWidth / 2;
+                    
+                    // 画像の境界内に収める
+                    sourceX = Math.max(0, Math.min(sourceX, originalWidth - sourceWidth));
+                } else {
+                    // 縦長の画像の場合
+                    sourceWidth = originalWidth;
+                    sourceHeight = originalWidth / targetRatio;
+                    sourceX = 0;
+                    
+                    // 顔の中心がクロップ領域の中心に来るように調整
+                    sourceY = faceCenterY - sourceHeight / 2;
+                    
+                    // 画像の境界内に収める
+                    sourceY = Math.max(0, Math.min(sourceY, originalHeight - sourceHeight));
+                }
+            } else {
+                // 顔が検出されない場合は中央クロップ
+                if (originalWidth / originalHeight > targetRatio) {
+                    sourceHeight = originalHeight;
+                    sourceWidth = originalHeight * targetRatio;
+                    sourceX = (originalWidth - sourceWidth) / 2;
+                    sourceY = 0;
+                } else {
+                    sourceWidth = originalWidth;
+                    sourceHeight = originalWidth / targetRatio;
+                    sourceX = 0;
+                    sourceY = (originalHeight - sourceHeight) / 2;
+                }
+            }
+            
+            // 画像を描画
+            ctx.drawImage(
+                img,
+                sourceX, sourceY, sourceWidth, sourceHeight,
+                0, 0, canvasWidth, canvasHeight
+            );
+            
+            callback(canvas.toDataURL('image/jpeg', 0.9));
+        }
+
+        // 基本的な3:4クロップ関数（顔認識なし）
+        function cropImageTo3x4Basic(img, callback) {
+            const canvas = document.createElement('canvas');
+            const ctx = canvas.getContext('2d');
+            
+            const originalWidth = img.width;
+            const originalHeight = img.height;
+            const targetRatio = 3 / 4;
+            
+            let sourceWidth, sourceHeight, sourceX, sourceY;
+            
+            if (originalWidth / originalHeight > targetRatio) {
+                sourceHeight = originalHeight;
+                sourceWidth = originalHeight * targetRatio;
+                sourceX = (originalWidth - sourceWidth) / 2;
+                sourceY = 0;
+            } else {
+                sourceWidth = originalWidth;
+                sourceHeight = originalWidth / targetRatio;
+                sourceX = 0;
+                sourceY = (originalHeight - sourceHeight) / 2;
+            }
+            
+            const canvasWidth = 300;
+            const canvasHeight = 400;
+            canvas.width = canvasWidth;
+            canvas.height = canvasHeight;
+            
+            ctx.drawImage(
+                img,
+                sourceX, sourceY, sourceWidth, sourceHeight,
+                0, 0, canvasWidth, canvasHeight
+            );
+            
+            callback(canvas.toDataURL('image/jpeg', 0.9));
+        }
+
+        // プレビュー作成関数
+        function createImagePreview(imageData) {
+            const previewDiv = document.createElement('div');
+            previewDiv.className = 'image-preview';
+            previewDiv.setAttribute('data-id', imageData.id);
+
+            previewDiv.innerHTML = `
+                <img src="${imageData.currentSrc}" alt="${imageData.name}">
+                <div class="crop-controls">
+                    <button class="crop-btn ${imageData.isCropped ? 'active' : ''}" onclick="toggleCrop(${imageData.id}, true)">3:4</button>
+                    <button class="crop-btn ${!imageData.isCropped ? 'active' : ''}" onclick="toggleCrop(${imageData.id}, false)">元</button>
+                </div>
+                <button class="delete-btn" onclick="deleteImage(${imageData.id})">&times;</button>
+                <div class="image-info">
+                    <div><strong>${imageData.name}</strong></div>
+                    <div>${formatFileSize(imageData.size)} ${imageData.isCropped ? '(3:4)' : '(元画像)'}</div>
+                </div>
+            `;
+
+            previewContainer.appendChild(previewDiv);
+            
+            // アニメーション効果
+            setTimeout(() => {
+                previewDiv.style.opacity = '0';
+                previewDiv.style.transform = 'scale(0.8)';
+                previewDiv.style.transition = 'all 0.3s ease';
+                
+                setTimeout(() => {
+                    previewDiv.style.opacity = '1';
+                    previewDiv.style.transform = 'scale(1)';
+                }, 10);
+            }, 10);
+        }
+
+        // クロップ切り替え関数
+        function toggleCrop(imageId, shouldCrop) {
+            const imageIndex = uploadedImages.findIndex(img => img.id === imageId);
+            if (imageIndex === -1) return;
+            
+            const imageData = uploadedImages[imageIndex];
+            const previewElement = document.querySelector(`[data-id="${imageId}"]`);
+            const imgElement = previewElement.querySelector('img');
+            const infoElement = previewElement.querySelector('.image-info div:last-child');
+            const cropButtons = previewElement.querySelectorAll('.crop-btn');
+            
+            if (shouldCrop) {
+                imageData.currentSrc = imageData.croppedSrc;
+                imageData.isCropped = true;
+                imgElement.src = imageData.croppedSrc;
+                infoElement.textContent = `${formatFileSize(imageData.size)} (4:3)`;
+                cropButtons[0].classList.add('active');
+                cropButtons[1].classList.remove('active');
+            } else {
+                imageData.currentSrc = imageData.originalSrc;
+                imageData.isCropped = false;
+                imgElement.src = imageData.originalSrc;
+                infoElement.textContent = `${formatFileSize(imageData.size)} (元画像)`;
+                cropButtons[0].classList.remove('active');
+                cropButtons[1].classList.add('active');
+            }
+            
+            uploadedImages[imageIndex] = imageData;
+        }
+
+        // 画像削除関数
+        function deleteImage(imageId) {
+            const imageIndex = uploadedImages.findIndex(img => img.id === imageId);
+            if (imageIndex !== -1) {
+                totalSize -= uploadedImages[imageIndex].size;
+                uploadedImages.splice(imageIndex, 1);
+                
+                const previewElement = document.querySelector(`[data-id="${imageId}"]`);
+                if (previewElement) {
+                    previewElement.style.transform = 'scale(0)';
+                    previewElement.style.opacity = '0';
+                    setTimeout(() => {
+                        previewElement.remove();
+                    }, 300);
+                }
+                
+                updateStats();
+            }
+        }
+
+        // 全削除関数
+        function clearAllImages() {
+            if (uploadedImages.length === 0) return;
+            
+            if (confirm('すべての画像を削除しますか？')) {
+                uploadedImages = [];
+                totalSize = 0;
+                previewContainer.innerHTML = '';
+                updateStats();
+            }
+        }
+
+        // 統計更新関数
+        function updateStats() {
+            if (uploadedImages.length > 0) {
+                stats.style.display = 'flex';
+                clearAllBtn.style.display = 'inline-block';
+                totalImagesEl.textContent = uploadedImages.length;
+                totalSizeEl.textContent = formatFileSize(totalSize);
+            } else {
+                stats.style.display = 'none';
+                clearAllBtn.style.display = 'none';
+            }
+            updateSubmitButton();
+        }
+
+        // 送信ボタンの状態更新
+        function updateSubmitButton() {
+            const lastName = lastNameInput.value.trim();
+            const firstName = firstNameInput.value.trim();
+            const grade = gradeSelect.value;
+            const hasImages = uploadedImages.length > 0;
+            
+            if (lastName && firstName && grade && hasImages) {
+                submitBtn.disabled = false;
+                submitBtn.textContent = '📤 送信する';
+            } else {
+                submitBtn.disabled = true;
+                if (!lastName || !firstName) {
+                    submitBtn.textContent = '📝 名前を入力してください';
+                } else if (!grade) {
+                    submitBtn.textContent = '🎓 学年を選択してください';
+                } else if (!hasImages) {
+                    submitBtn.textContent = '📸 写真を追加してください';
+                }
+            }
+        }
+
+        // フォーム送信関数
+        function submitForm() {
+            const lastName = lastNameInput.value.trim();
+            const firstName = firstNameInput.value.trim();
+            const grade = gradeSelect.value;
+            
+            if (!lastName || !firstName) {
+                alert('苗字と名前を入力してください。');
+                return;
+            }
+            
+            if (!grade) {
+                alert('学年を選択してください。');
+                return;
+            }
+            
+            if (uploadedImages.length === 0) {
+                alert('写真を追加してください。');
+                return;
+            }
+
+            // 送信データの準備
+            const formData = {
+                lastName: lastName,
+                firstName: firstName,
+                fullName: lastName + ' ' + firstName,
+                grade: grade,
+                images: uploadedImages.map(img => ({
+                    name: img.name,
+                    size: img.size,
+                    type: img.type,
+                    isCropped: img.isCropped,
+                    src: img.currentSrc // 現在選択されている画像（クロップ済みまたは元画像）
+                })),
+                totalImages: uploadedImages.length,
+                totalSize: totalSize,
+                timestamp: new Date().toISOString()
+            };
+
+            // 実際のサーバー送信処理をここに実装
+            console.log('送信データ:', formData);
+            
+            // 送信成功のメッセージ
+            alert(`${formData.fullName}様（${formData.grade}）\n${uploadedImages.length}枚の写真を送信しました！\n\n送信データ:\n- 名前: ${formData.fullName}\n- 学年: ${formData.grade}\n- 画像数: ${formData.totalImages}枚\n- 合計サイズ: ${formatFileSize(formData.totalSize)}`);
+            
+            // フォームリセット（オプション）
+            // resetForm();
+        }
+
+        // フォームリセット関数
+        function resetForm() {
+            lastNameInput.value = '';
+            firstNameInput.value = '';
+            gradeSelect.value = '';
+            uploadedImages = [];
+            totalSize = 0;
+            previewContainer.innerHTML = '';
+            updateStats();
+        }
+
+        // プログレスバー表示
+        function showProgress() {
+            progressBar.style.display = 'block';
+            progressFill.style.width = '0%';
+        }
+
+        // プログレスバー更新
+        function updateProgress(percent) {
+            progressFill.style.width = percent + '%';
+        }
+
+        // プログレスバー非表示
+        function hideProgress() {
+            setTimeout(() => {
+                progressBar.style.display = 'none';
+            }, 500);
+        }
+
+        // ファイルサイズフォーマット関数
+        function formatFileSize(bytes) {
+            if (bytes === 0) return '0 Bytes';
+            const k = 1024;
+            const sizes = ['Bytes', 'KB', 'MB', 'GB'];
+            const i = Math.floor(Math.log(bytes) / Math.log(k));
+            return parseFloat((bytes / Math.pow(k, i)).toFixed(2)) + ' ' + sizes[i];
+        }
+
+        // ページ読み込み時のアニメーション
+        document.addEventListener('DOMContentLoaded', () => {
+            const container = document.querySelector('.container');
+            container.style.opacity = '0';
+            container.style.transform = 'translateY(20px)';
+            container.style.transition = 'all 0.6s ease';
+            
+            setTimeout(() => {
+                container.style.opacity = '1';
+                container.style.transform = 'translateY(0)';
+            }, 100);
+            
+            // 初期状態で送信ボタンを無効化
+            updateSubmitButton();
+        });
+    </script>
+</body>
+</html>
