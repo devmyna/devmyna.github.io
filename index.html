@@ -601,7 +601,7 @@
                                 faceDetected = true;
                                 const detection = detections[0]; // 最初の顔を使用
                                 console.log('検出されました')
-                                croppedSrc = await cropToFaceRegionWithAPI(img, detection);
+                                croppedSrc = cropToFaceRegionWithAPI(img, detection);
                             } else {
                                 // 顔が検出されなかった場合は標準クロップ
                                 const canvas = performStandardCrop(img);
