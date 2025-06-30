@@ -315,6 +315,32 @@
             box-shadow: none;
         }
 
+        .loading-status {
+            margin: 10px 0;
+            padding: 10px;
+            background: rgba(102, 126, 234, 0.1);
+            border-radius: 10px;
+            color: #667eea;
+            font-size: 0.9rem;
+            display: none;
+        }
+
+        .face-detection-info {
+            position: absolute;
+            top: 40px;
+            right: 10px;
+            background: rgba(46, 213, 115, 0.9);
+            color: white;
+            padding: 4px 8px;
+            border-radius: 10px;
+            font-size: 0.7rem;
+            font-weight: 500;
+        }
+
+        .face-detection-info.no-face {
+            background: rgba(255, 193, 7, 0.9);
+        }
+
         @media (max-width: 768px) {
             .container {
                 padding: 20px;
@@ -342,6 +368,10 @@
 <body>
     <div class="container">
         <h1>📸 Photo Upload</h1>
+        
+        <div class="loading-status" id="loadingStatus">
+            🧠 AI顔検出モデルを読み込み中...
+        </div>
         
         <div class="form-section">
             <div class="input-group">
@@ -403,9 +433,13 @@
         </div>
     </div>
 
+    <!-- Face-API.js CDN -->
+    <script src="https://cdn.jsdelivr.net/npm/face-api.js@0.22.2/dist/face-api.min.js"></script>
+
     <script>
         let uploadedImages = [];
         let totalSize = 0;
+        let faceApiLoaded = false;
 
         // DOM要素の取得
         const uploadArea = document.getElementById('uploadArea');
@@ -421,6 +455,42 @@
         const firstNameInput = document.getElementById('firstName');
         const gradeSelect = document.getElementById('grade');
         const submitBtn = document.getElementById('submitBtn');
+        const loadingStatus = document.getElementById('loadingStatus');
+
+        console.log('読み込み開始したよー(最初の最初)')
+        window.addEventListener('DOMContentLoaded', initializeFaceAPI);
+        
+        // Face-API.jsの初期化
+        async function initializeFaceAPI() {
+            console.log('読み込み開始したよー(最初)')
+            try {
+                loadingStatus.style.display = 'block';
+                loadingStatus.textContent = '🧠 AI顔検出モデルを読み込み中...';
+                
+                // モデルのロード
+                await Promise.all([
+                    faceapi.nets.tinyFaceDetector.loadFromUri('./model'),
+                    faceapi.nets.faceLandmark68Net.loadFromUri('./model'),
+                    faceapi.nets.faceRecognitionNet.loadFromUri('./model'),
+                    faceapi.nets.ssdMobilenetv1.loadFromUri('./model')
+                ]);
+                
+                faceApiLoaded = true;
+                console.log('読み込み開始したよー')
+                loadingStatus.textContent = '✅ AI顔検出モデル読み込み完了！';
+                setTimeout(() => {
+                    loadingStatus.style.display = 'none';
+                }, 2000);
+                
+                console.log('Face-API.js models loaded successfully');
+            } catch (error) {
+                console.error('Face-API.js loading error:', error);
+                loadingStatus.textContent = '⚠️ 顔検出機能の読み込みに失敗しました（通常モードで動作）';
+                setTimeout(() => {
+                    loadingStatus.style.display = 'none';
+                }, 3000);
+            }
+        }
 
         // ドラッグ&ドロップのイベントリスナー
         uploadArea.addEventListener('dragover', (e) => {
@@ -475,84 +545,185 @@
                     if (index === imageFiles.length - 1) {
                         hideProgress();
                     }
-                }, index * 200);
+                }, index * 500); // より長い間隔で処理（AI処理時間を考慮）
             });
         }
 
         // 画像処理関数
-        function processImage(file) {
+        async function processImage(file) {
             const reader = new FileReader();
             
-            reader.onload = (e) => {
+            reader.onload = async (e) => {
                 const originalSrc = e.target.result;
                 
-                // 3:4にクロップした画像を生成
-                cropImageTo3x4(originalSrc, (croppedSrc) => {
-                    const imageData = {
-                        id: Date.now() + Math.random(),
-                        originalSrc: originalSrc,
-                        croppedSrc: croppedSrc,
-                        currentSrc: croppedSrc, // 現在表示している画像
-                        isCropped: true,
-                        name: file.name,
-                        size: file.size,
-                        type: file.type
-                    };
+                // Face-API.jsを使用して顔検出とクロップ
+                const { croppedSrc, faceDetected } = await cropImageWithFaceAPI(originalSrc);
+                
+                const imageData = {
+                    id: Date.now() + Math.random(),
+                    originalSrc: originalSrc,
+                    croppedSrc: croppedSrc,
+                    currentSrc: croppedSrc,
+                    isCropped: true,
+                    faceDetected: faceDetected,
+                    name: file.name,
+                    size: file.size,
+                    type: file.type
+                };
 
-                    uploadedImages.push(imageData);
-                    totalSize += file.size;
-                    
-                    createImagePreview(imageData);
-                    updateStats();
-                });
+                uploadedImages.push(imageData);
+                totalSize += file.size;
+                
+                createImagePreview(imageData);
+                updateStats();
             };
 
             reader.readAsDataURL(file);
         }
 
-        // 3:4クロップ関数
-        function cropImageTo3x4(imageSrc, callback) {
-            const img = new Image();
-            img.onload = function() {
-                const canvas = document.createElement('canvas');
-                const ctx = canvas.getContext('2d');
-                
-                const originalWidth = img.width;
-                const originalHeight = img.height;
-                const targetRatio = 3 / 4;
-                
-                let sourceWidth, sourceHeight, sourceX, sourceY;
-                
-                if (originalWidth / originalHeight > targetRatio) {
-                    // 横長の場合、高さを基準にして幅を調整
-                    sourceHeight = originalHeight;
-                    sourceWidth = originalHeight * targetRatio;
-                    sourceX = (originalWidth - sourceWidth) / 2;
-                    sourceY = 0;
-                } else {
-                    // 縦長の場合、幅を基準にして高さを調整
-                    sourceWidth = originalWidth;
-                    sourceHeight = originalWidth / targetRatio;
-                    sourceX = 0;
-                    sourceY = (originalHeight - sourceHeight) / 2;
-                }
-                
-                // キャンバスサイズを3:4比率に設定
-                const canvasWidth = 300;
-                const canvasHeight = 400;
-                canvas.width = canvasWidth;
-                canvas.height = canvasHeight;
-                
-                // 画像を描画
-                ctx.drawImage(
-                    img,
-                    sourceX, sourceY, sourceWidth, sourceHeight,
-                    0, 0, canvasWidth, canvasHeight
-                );
-                
-                callback(canvas.toDataURL('image/jpeg', 0.9));
+        // Face-API.jsを使用した顔検出とクロップ
+        async function cropImageWithFaceAPI(imageSrc) {
+            return new Promise((resolve) => {
+                const img = new Image();
+                img.onload = async () => {
+                    let faceDetected = false;
+                    let croppedSrc;
+                    
+                    if (faceApiLoaded) {
+                        try {
+                            // 顔検出を実行
+                            const detections = await faceapi.detectAllFaces(img, new faceapi.TinyFaceDetectorOptions())
+                                .withFaceLandmarks()
+                                .withFaceDescriptors();
+                            
+                            if (detections.length > 0) {
+                                // 顔が検出された場合
+                                faceDetected = true;
+                                const detection = detections[0]; // 最初の顔を使用
+                                console.log('検出されました')
+                                croppedSrc = await cropToFaceRegionWithAPI(img, detection);
+                            } else {
+                                // 顔が検出されなかった場合は標準クロップ
+                                const canvas = performStandardCrop(img);
+                                croppedSrc = canvas.toDataURL('image/jpeg', 0.9);
+                                console.log('検出されてないっす')
+                            }
+                        } catch (error) {
+                            console.error('Face detection error:', error);
+                            // エラーの場合は標準クロップ
+                            const canvas = performStandardCrop(img);
+                            croppedSrc = canvas.toDataURL('image/jpeg', 0.9);
+                            console.log('エラーっす')
+                        }
+                    } else {
+                        // Face-API.jsが読み込まれていない場合は標準クロップ
+                        const canvas = performStandardCrop(img);
+                        croppedSrc = canvas.toDataURL('image/jpeg', 0.9);
+                        console.log('がちのエラーっす')
+                    }
+                    
+                    resolve({ croppedSrc, faceDetected });
+                };
+                img.src = imageSrc;
+            });
+        }
+
+        // Face-API.jsの検出結果を使用してクロップ
+        async function cropToFaceRegionWithAPI(img, detection) {
+            const canvas = document.createElement('canvas');
+            const ctx = canvas.getContext('2d');
+            
+            // 顔のバウンディングボックスを取得
+            const box = detection.detection.box;
+            const landmarks = detection.landmarks;
+            
+            // 証明写真風のクロップ範囲を計算
+            const faceWidth = box.width;
+            const faceHeight = box.height;
+            
+            // 顔の位置から上半身を含むクロップ範囲を算出
+            const margin = {
+                top: faceHeight * 0.1,    // 顔の上に30%のマージン
+                bottom: faceHeight * 0.15,  // 顔の下に150%のマージン（上半身含む）
+                left: faceWidth * 0.1,     // 顔の左右に40%ずつマージン
+                right: faceWidth * 0.4
             };
-            img.src = imageSrc;
+            
+            const cropX = Math.max(0, box.x - margin.left);
+            const cropY = Math.max(0, box.y - margin.top);
+            const cropWidth = Math.min(img.width - cropX, faceWidth + margin.left + margin.right);
+            const cropHeight = Math.min(img.height - cropY, faceHeight + margin.top + margin.bottom);
+            
+            // 3:4比率に調整
+            const targetRatio = 3 / 4;
+            let finalWidth = cropWidth;
+            let finalHeight = cropHeight;
+            
+            if (finalWidth / finalHeight > targetRatio) {
+                finalWidth = finalHeight * targetRatio;
+            } else {
+                finalHeight = finalWidth / targetRatio;
+            }
+            
+            // キャンバスサイズ設定（証明写真サイズ）
+            canvas.width = 300;
+            canvas.height = 400;
+            
+            // 白背景
+            ctx.fillStyle = 'white';
+            ctx.fillRect(0, 0, 300, 400);
+            
+            // クロップした画像を描画
+            const centerX = cropX + cropWidth / 2;
+            const centerY = cropY + cropHeight / 2;
+            const sourceX = centerX - finalWidth / 2;
+            const sourceY = centerY - finalHeight / 2;
+            
+            ctx.drawImage(
+                img,
+                sourceX, sourceY, finalWidth, finalHeight,
+                0, 0, 300, 400
+            );
+            
+            return canvas.toDataURL('image/jpeg', 0.95);
+        }
+
+        // 標準クロップ（Face-API.js使用不可時）
+        function performStandardCrop(img) {
+            const canvas = document.createElement('canvas');
+            const ctx = canvas.getContext('2d');
+            
+            const originalWidth = img.width;
+            const originalHeight = img.height;
+            const targetRatio = 3 / 4;
+            
+            let sourceWidth, sourceHeight, sourceX, sourceY;
+            
+            if (originalWidth / originalHeight > targetRatio) {
+                sourceHeight = originalHeight;
+                sourceWidth = originalHeight * targetRatio;
+                sourceX = (originalWidth - sourceWidth) / 2;
+                sourceY = 0;
+            } else {
+                sourceWidth = originalWidth;
+                sourceHeight = originalWidth / targetRatio;
+                sourceX = 0;
+                sourceY = (originalHeight - sourceHeight) / 2;
+            }
+            
+            canvas.width = 300;
+            canvas.height = 400;
+            
+            ctx.fillStyle = 'white';
+            ctx.fillRect(0, 0, 300, 400);
+            
+            ctx.drawImage(
+                img,
+                sourceX, sourceY, sourceWidth, sourceHeight,
+                0, 0, 300, 400
+            );
+            
+            return canvas;
         }
 
         // プレビュー作成関数
@@ -561,16 +732,22 @@
             previewDiv.className = 'image-preview';
             previewDiv.setAttribute('data-id', imageData.id);
 
+            const faceDetectionBadge = imageData.faceDetected 
+                ? '<div class="face-detection-info">顔検出</div>'
+                : '<div class="face-detection-info no-face">標準</div>';
+
             previewDiv.innerHTML = `
                 <img src="${imageData.currentSrc}" alt="${imageData.name}">
                 <div class="crop-controls">
                     <button class="crop-btn ${imageData.isCropped ? 'active' : ''}" onclick="toggleCrop(${imageData.id}, true)">3:4</button>
                     <button class="crop-btn ${!imageData.isCropped ? 'active' : ''}" onclick="toggleCrop(${imageData.id}, false)">元</button>
                 </div>
+                ${faceDetectionBadge}
                 <button class="delete-btn" onclick="deleteImage(${imageData.id})">&times;</button>
                 <div class="image-info">
                     <div><strong>${imageData.name}</strong></div>
                     <div>${formatFileSize(imageData.size)} ${imageData.isCropped ? '(3:4)' : '(元画像)'}</div>
+                    ${imageData.faceDetected ? '<div style="font-size: 0.8rem; color: #2ed573;">🤖 AI顔検出適用済み</div>' : ''}
                 </div>
             `;
 
@@ -597,7 +774,7 @@
             const imageData = uploadedImages[imageIndex];
             const previewElement = document.querySelector(`[data-id="${imageId}"]`);
             const imgElement = previewElement.querySelector('img');
-            const infoElement = previewElement.querySelector('.image-info div:last-child');
+            const infoElement = previewElement.querySelector('.image-info div:nth-child(2)');
             const cropButtons = previewElement.querySelectorAll('.crop-btn');
             
             if (shouldCrop) {
