@@ -481,8 +481,8 @@
             reader.onload = (e) => {
                 const originalSrc = e.target.result;
                 
-                // 3:4にクロップした画像を生成
-                cropImageTo4x3(originalSrc, (croppedSrc) => {
+                // 3:4にクロップした画像を生成（顔認識付き）
+                cropImageTo3x4WithFaceDetection(originalSrc, (croppedSrc) => {
                     const imageData = {
                         id: Date.now() + Math.random(),
                         originalSrc: originalSrc,
@@ -505,49 +505,334 @@
             reader.readAsDataURL(file);
         }
 
-        // 4:3クロップ関数
-        function cropImageTo3x4(imageSrc, callback) {
+        // 顔認識付き3:4クロップ関数
+        function cropImageTo3x4WithFaceDetection(imageSrc, callback) {
             const img = new Image();
             img.onload = function() {
+                // 顔認識を試行
+                detectFaces(img).then(faces => {
+                    cropImageWithFaces(img, faces, callback);
+                }).catch(() => {
+                    // 顔認識が失敗した場合は通常のクロップ
+                    cropImageTo3x4Basic(img, callback);
+                });
+            };
+            img.src = imageSrc;
+        }
+
+        // 顔認識関数
+        function detectFaces(img) {
+            return new Promise((resolve, reject) => {
+                // Canvas APIを使用した簡易顔認識（顔の色域検出）
                 const canvas = document.createElement('canvas');
                 const ctx = canvas.getContext('2d');
+                canvas.width = img.width;
+                canvas.height = img.height;
+                ctx.drawImage(img, 0, 0);
                 
-                const originalWidth = img.width;
-                const originalHeight = img.height;
-                const targetRatio = 3 / 4;
+                try {
+                    const imageData = ctx.getImageData(0, 0, canvas.width, canvas.height);
+                    const faces = findFaceRegions(imageData, canvas.width, canvas.height);
+                    
+                    if (faces.length > 0) {
+                        resolve(faces);
+                    } else {
+                        reject('No faces detected');
+                    }
+                } catch (error) {
+                    reject(error);
+                }
+            });
+        }
+
+        // 肌色域を検出して顔の候補領域を見つける関数
+        function findFaceRegions(imageData, width, height) {
+            const data = imageData.data;
+            const faces = [];
+            const skinPixels = [];
+            
+            // 肌色の検出
+            for (let i = 0; i < data.length; i += 4) {
+                const r = data[i];
+                const g = data[i + 1];
+                const b = data[i + 2];
                 
-                let sourceWidth, sourceHeight, sourceX, sourceY;
+                // 肌色の判定（簡易版）
+                if (isSkinColor(r, g, b)) {
+                    const pixelIndex = i / 4;
+                    const x = pixelIndex % width;
+                    const y = Math.floor(pixelIndex / width);
+                    skinPixels.push({ x, y });
+                }
+            }
+            
+            // 肌色ピクセルが集中している領域を顔として認識
+            if (skinPixels.length > 100) { // 最小ピクセル数
+                const clusters = clusterSkinPixels(skinPixels, width, height);
                 
+                clusters.forEach(cluster => {
+                    if (cluster.pixels.length > 500) { // 顔と判定する最小サイズ
+                        faces.push({
+                            x: cluster.centerX - cluster.width / 2,
+                            y: cluster.centerY - cluster.height / 2,
+                            width: cluster.width,
+                            height: cluster.height,
+                            centerX: cluster.centerX,
+                            centerY: cluster.centerY
+                        });
+                    }
+                });
+            }
+            
+            return faces;
+        }
+
+        // 肌色判定関数
+        function isSkinColor(r, g, b) {
+            // HSV変換による肌色判定
+            const max = Math.max(r, g, b);
+            const min = Math.min(r, g, b);
+            const diff = max - min;
+            
+            if (max === 0) return false;
+            
+            const s = diff / max;
+            let h = 0;
+            
+            if (diff !== 0) {
+                if (max === r) {
+                    h = ((g - b) / diff) % 6;
+                } else if (max === g) {
+                    h = (b - r) / diff + 2;
+                } else {
+                    h = (r - g) / diff + 4;
+                }
+                h = h * 60;
+                if (h < 0) h += 360;
+            }
+            
+            // 肌色の範囲：色相0-50度、彩度20-80%、明度30-95%
+            return (h >= 0 && h <= 50) && 
+                   (s >= 0.2 && s <= 0.8) && 
+                   (max >= 77 && max <= 242); // 明度30-95%相当
+        }
+
+        // 肌色ピクセルをクラスタリング
+        function clusterSkinPixels(pixels, imageWidth, imageHeight) {
+            const clusters = [];
+            const gridSize = Math.min(imageWidth, imageHeight) / 20; // グリッドサイズ
+            const grid = {};
+            
+            // グリッドに分割
+            pixels.forEach(pixel => {
+                const gridX = Math.floor(pixel.x / gridSize);
+                const gridY = Math.floor(pixel.y / gridSize);
+                const key = `${gridX}-${gridY}`;
+                
+                if (!grid[key]) {
+                    grid[key] = [];
+                }
+                grid[key].push(pixel);
+            });
+            
+            // 密度の高いグリッドセルを見つける
+            Object.keys(grid).forEach(key => {
+                const cellPixels = grid[key];
+                if (cellPixels.length > 20) { // 閾値
+                    const [gridX, gridY] = key.split('-').map(Number);
+                    
+                    // 周辺セルもチェックして大きなクラスターを形成
+                    const clusterPixels = [];
+                    for (let dx = -1; dx <= 1; dx++) {
+                        for (let dy = -1; dy <= 1; dy++) {
+                            const neighborKey = `${gridX + dx}-${gridY + dy}`;
+                            if (grid[neighborKey]) {
+                                clusterPixels.push(...grid[neighborKey]);
+                            }
+                        }
+                    }
+                    
+                    if (clusterPixels.length > 100) {
+                        // クラスターの中心と範囲を計算
+                        const xs = clusterPixels.map(p => p.x);
+                        const ys = clusterPixels.map(p => p.y);
+                        
+                        const minX = Math.min(...xs);
+                        const maxX = Math.max(...xs);
+                        const minY = Math.min(...ys);
+                        const maxY = Math.max(...ys);
+                        
+                        clusters.push({
+                            pixels: clusterPixels,
+                            centerX: (minX + maxX) / 2,
+                            centerY: (minY + maxY) / 2,
+                            width: maxX - minX,
+                            height: maxY - minY
+                        });
+                    }
+                }
+            });
+            
+            // 重複するクラスターを統合
+            return mergeClusters(clusters);
+        }
+
+        // クラスターを統合
+        function mergeClusters(clusters) {
+            const merged = [];
+            const used = new Set();
+            
+            clusters.forEach((cluster, i) => {
+                if (used.has(i)) return;
+                
+                let mergedCluster = { ...cluster };
+                used.add(i);
+                
+                // 近くのクラスターを統合
+                clusters.forEach((otherCluster, j) => {
+                    if (i !== j && !used.has(j)) {
+                        const distance = Math.sqrt(
+                            Math.pow(cluster.centerX - otherCluster.centerX, 2) +
+                            Math.pow(cluster.centerY - otherCluster.centerY, 2)
+                        );
+                        
+                        if (distance < Math.max(cluster.width, cluster.height)) {
+                            // 統合
+                            const allPixels = [...mergedCluster.pixels, ...otherCluster.pixels];
+                            const xs = allPixels.map(p => p.x);
+                            const ys = allPixels.map(p => p.y);
+                            
+                            const minX = Math.min(...xs);
+                            const maxX = Math.max(...xs);
+                            const minY = Math.min(...ys);
+                            const maxY = Math.max(...ys);
+                            
+                            mergedCluster = {
+                                pixels: allPixels,
+                                centerX: (minX + maxX) / 2,
+                                centerY: (minY + maxY) / 2,
+                                width: maxX - minX,
+                                height: maxY - minY
+                            };
+                            
+                            used.add(j);
+                        }
+                    }
+                });
+                
+                merged.push(mergedCluster);
+            });
+            
+            return merged.sort((a, b) => b.pixels.length - a.pixels.length); // 大きい順
+        }
+
+        // 顔の位置を考慮したクロップ
+        function cropImageWithFaces(img, faces, callback) {
+            const canvas = document.createElement('canvas');
+            const ctx = canvas.getContext('2d');
+            
+            const originalWidth = img.width;
+            const originalHeight = img.height;
+            const targetRatio = 3 / 4;
+            
+            // キャンバスサイズを3:4比率に設定
+            const canvasWidth = 300;
+            const canvasHeight = 400;
+            canvas.width = canvasWidth;
+            canvas.height = canvasHeight;
+            
+            let sourceX, sourceY, sourceWidth, sourceHeight;
+            
+            if (faces.length > 0) {
+                // 最大の顔（最も多くのピクセルを含む）を基準にする
+                const primaryFace = faces[0];
+                const faceCenterX = primaryFace.centerX;
+                const faceCenterY = primaryFace.centerY;
+                
+                // 顔を中心とした3:4のクロップ領域を計算
                 if (originalWidth / originalHeight > targetRatio) {
-                    // 横長の場合、高さを基準にして幅を調整
+                    // 横長の画像の場合
+                    sourceHeight = originalHeight;
+                    sourceWidth = originalHeight * targetRatio;
+                    sourceY = 0;
+                    
+                    // 顔の中心がクロップ領域の中心に来るように調整
+                    sourceX = faceCenterX - sourceWidth / 2;
+                    
+                    // 画像の境界内に収める
+                    sourceX = Math.max(0, Math.min(sourceX, originalWidth - sourceWidth));
+                } else {
+                    // 縦長の画像の場合
+                    sourceWidth = originalWidth;
+                    sourceHeight = originalWidth / targetRatio;
+                    sourceX = 0;
+                    
+                    // 顔の中心がクロップ領域の中心に来るように調整
+                    sourceY = faceCenterY - sourceHeight / 2;
+                    
+                    // 画像の境界内に収める
+                    sourceY = Math.max(0, Math.min(sourceY, originalHeight - sourceHeight));
+                }
+            } else {
+                // 顔が検出されない場合は中央クロップ
+                if (originalWidth / originalHeight > targetRatio) {
                     sourceHeight = originalHeight;
                     sourceWidth = originalHeight * targetRatio;
                     sourceX = (originalWidth - sourceWidth) / 2;
                     sourceY = 0;
                 } else {
-                    // 縦長の場合、幅を基準にして高さを調整
                     sourceWidth = originalWidth;
                     sourceHeight = originalWidth / targetRatio;
                     sourceX = 0;
                     sourceY = (originalHeight - sourceHeight) / 2;
                 }
-                
-                // キャンバスサイズを4:3比率に設定
-                const canvasWidth = 300;
-                const canvasHeight = 400;
-                canvas.width = canvasWidth;
-                canvas.height = canvasHeight;
-                
-                // 画像を描画
-                ctx.drawImage(
-                    img,
-                    sourceX, sourceY, sourceWidth, sourceHeight,
-                    0, 0, canvasWidth, canvasHeight
-                );
-                
-                callback(canvas.toDataURL('image/jpeg', 0.9));
-            };
-            img.src = imageSrc;
+            }
+            
+            // 画像を描画
+            ctx.drawImage(
+                img,
+                sourceX, sourceY, sourceWidth, sourceHeight,
+                0, 0, canvasWidth, canvasHeight
+            );
+            
+            callback(canvas.toDataURL('image/jpeg', 0.9));
+        }
+
+        // 基本的な3:4クロップ関数（顔認識なし）
+        function cropImageTo3x4Basic(img, callback) {
+            const canvas = document.createElement('canvas');
+            const ctx = canvas.getContext('2d');
+            
+            const originalWidth = img.width;
+            const originalHeight = img.height;
+            const targetRatio = 3 / 4;
+            
+            let sourceWidth, sourceHeight, sourceX, sourceY;
+            
+            if (originalWidth / originalHeight > targetRatio) {
+                sourceHeight = originalHeight;
+                sourceWidth = originalHeight * targetRatio;
+                sourceX = (originalWidth - sourceWidth) / 2;
+                sourceY = 0;
+            } else {
+                sourceWidth = originalWidth;
+                sourceHeight = originalWidth / targetRatio;
+                sourceX = 0;
+                sourceY = (originalHeight - sourceHeight) / 2;
+            }
+            
+            const canvasWidth = 300;
+            const canvasHeight = 400;
+            canvas.width = canvasWidth;
+            canvas.height = canvasHeight;
+            
+            ctx.drawImage(
+                img,
+                sourceX, sourceY, sourceWidth, sourceHeight,
+                0, 0, canvasWidth, canvasHeight
+            );
+            
+            callback(canvas.toDataURL('image/jpeg', 0.9));
         }
 
         // プレビュー作成関数
