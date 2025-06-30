@@ -481,7 +481,7 @@
             reader.onload = (e) => {
                 const originalSrc = e.target.result;
                 
-                // 4:3にクロップした画像を生成
+                // 3:4にクロップした画像を生成
                 cropImageTo4x3(originalSrc, (croppedSrc) => {
                     const imageData = {
                         id: Date.now() + Math.random(),
@@ -506,7 +506,7 @@
         }
 
         // 4:3クロップ関数
-        function cropImageTo4x3(imageSrc, callback) {
+        function cropImageTo3x4(imageSrc, callback) {
             const img = new Image();
             img.onload = function() {
                 const canvas = document.createElement('canvas');
@@ -514,7 +514,7 @@
                 
                 const originalWidth = img.width;
                 const originalHeight = img.height;
-                const targetRatio = 4 / 3;
+                const targetRatio = 3 / 4;
                 
                 let sourceWidth, sourceHeight, sourceX, sourceY;
                 
@@ -533,8 +533,8 @@
                 }
                 
                 // キャンバスサイズを4:3比率に設定
-                const canvasWidth = 400;
-                const canvasHeight = 300;
+                const canvasWidth = 300;
+                const canvasHeight = 400;
                 canvas.width = canvasWidth;
                 canvas.height = canvasHeight;
                 
@@ -559,13 +559,13 @@
             previewDiv.innerHTML = `
                 <img src="${imageData.currentSrc}" alt="${imageData.name}">
                 <div class="crop-controls">
-                    <button class="crop-btn ${imageData.isCropped ? 'active' : ''}" onclick="toggleCrop(${imageData.id}, true)">4:3</button>
+                    <button class="crop-btn ${imageData.isCropped ? 'active' : ''}" onclick="toggleCrop(${imageData.id}, true)">3:4</button>
                     <button class="crop-btn ${!imageData.isCropped ? 'active' : ''}" onclick="toggleCrop(${imageData.id}, false)">元</button>
                 </div>
                 <button class="delete-btn" onclick="deleteImage(${imageData.id})">&times;</button>
                 <div class="image-info">
                     <div><strong>${imageData.name}</strong></div>
-                    <div>${formatFileSize(imageData.size)} ${imageData.isCropped ? '(4:3)' : '(元画像)'}</div>
+                    <div>${formatFileSize(imageData.size)} ${imageData.isCropped ? '(3:4)' : '(元画像)'}</div>
                 </div>
             `;
 
