@@ -646,9 +646,9 @@
             console.log('マージン調整するよー')
             const margin = {
                 top: faceHeight * 0.3,    // 顔の上に30%のマージン
-                bottom: faceHeight * 1.15,  // 顔の下に150%のマージン（上半身含む）
+                bottom: faceHeight * 0.6,  // 顔の下に150%のマージン（上半身含む）
                 left: faceWidth * 0.2,     // 顔の左右に40%ずつマージン
-                right: faceWidth * 0.4
+                right: faceWidth * 0.2
             };
             
             const cropX = Math.max(0, box.x - margin.left);
