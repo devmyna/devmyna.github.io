@@ -482,7 +482,7 @@
                 const originalSrc = e.target.result;
                 
                 // 3:4にクロップした画像を生成
-                cropImageTo4x3(originalSrc, (croppedSrc) => {
+                cropImageTo3x4(originalSrc, (croppedSrc) => {
                     const imageData = {
                         id: Date.now() + Math.random(),
                         originalSrc: originalSrc,
@@ -505,7 +505,7 @@
             reader.readAsDataURL(file);
         }
 
-        // 4:3クロップ関数
+        // 3:4クロップ関数
         function cropImageTo3x4(imageSrc, callback) {
             const img = new Image();
             img.onload = function() {
@@ -532,7 +532,7 @@
                     sourceY = (originalHeight - sourceHeight) / 2;
                 }
                 
-                // キャンバスサイズを4:3比率に設定
+                // キャンバスサイズを3:4比率に設定
                 const canvasWidth = 300;
                 const canvasHeight = 400;
                 canvas.width = canvasWidth;
@@ -599,7 +599,7 @@
                 imageData.currentSrc = imageData.croppedSrc;
                 imageData.isCropped = true;
                 imgElement.src = imageData.croppedSrc;
-                infoElement.textContent = `${formatFileSize(imageData.size)} (4:3)`;
+                infoElement.textContent = `${formatFileSize(imageData.size)} (3:4)`;
                 cropButtons[0].classList.add('active');
                 cropButtons[1].classList.remove('active');
             } else {
