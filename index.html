@@ -464,6 +464,11 @@
             
             imageFiles.forEach((file, index) => {
                 setTimeout(() => {
+                    if (file.size < 1024 * 1024 * 2) {
+                        alert('ファイルサイズは2MB以上にしてください');
+                        return;
+                    }
+
                     processImage(file);
                     updateProgress((index + 1) / imageFiles.length * 100);
                     
