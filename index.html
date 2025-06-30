@@ -645,9 +645,9 @@
             // 顔の位置から上半身を含むクロップ範囲を算出
             console.log('マージン調整するよー')
             const margin = {
-                top: faceHeight * 0.1,    // 顔の上に30%のマージン
-                bottom: faceHeight * 0.3,  // 顔の下に150%のマージン（上半身含む）
-                left: faceWidth * 0.1,     // 顔の左右に40%ずつマージン
+                top: faceHeight * 0.3,    // 顔の上に30%のマージン
+                bottom: faceHeight * 1.15,  // 顔の下に150%のマージン（上半身含む）
+                left: faceWidth * 0.2,     // 顔の左右に40%ずつマージン
                 right: faceWidth * 0.4
             };
             
