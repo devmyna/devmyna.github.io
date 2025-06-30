@@ -630,8 +630,9 @@
 
         // Face-API.jsの検出結果を使用してクロップ
         async function cropToFaceRegionWithAPI(img, detection) {
+            console.log('マージン調整するやーつに入りました')
             const canvas = document.createElement('canvas');
-            const ctx = canvas.getContext('2d');
+            const ctx = canvas.getContext('2d', { willReadFrequently: true });
             
             // 顔のバウンディングボックスを取得
             const box = detection.detection.box;
@@ -692,7 +693,7 @@
         // 標準クロップ（Face-API.js使用不可時）
         function performStandardCrop(img) {
             const canvas = document.createElement('canvas');
-            const ctx = canvas.getContext('2d');
+            const ctx = canvas.getContext('2d', { willReadFrequently: true });
             
             const originalWidth = img.width;
             const originalHeight = img.height;
