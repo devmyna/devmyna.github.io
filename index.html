@@ -592,9 +592,9 @@
                     if (faceApiLoaded) {
                         try {
                             // 顔検出を実行
-                            const detections = await faceapi.detectAllFaces(img, new faceapi.TinyFaceDetectorOptions());
-                                //.withFaceLandmarks()
-                                //.withFaceDescriptors();
+                            const detections = await faceapi.detectAllFaces(img, new faceapi.TinyFaceDetectorOptions())
+                                .withFaceLandmarks()
+                                .withFaceDescriptors();
                             
                             if (detections.length > 0) {
                                 // 顔が検出された場合
