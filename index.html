@@ -433,9 +433,8 @@
         </div>
     </div>
 
+    <!-- Face-API.js CDN -->
     <script src="https://cdn.jsdelivr.net/npm/face-api.js@0.22.2/dist/face-api.min.js"></script>
-    <script src="https://cdn.jsdelivr.net/npm/@tensorflow/tfjs@3.20.0/dist/tf.min.js"></script>
-    <script src="https://cdn.jsdelivr.net/npm/@tensorflow-models/body-pix@2.2.0"></script>
 
     <script>
         let uploadedImages = [];
@@ -688,20 +687,6 @@
                 0, 0, 300, 400
             );
             
-            // 背景を白にする処理
-            const net = await bodyPix.load();
-            const segmentation = await net.segmentPerson(img);
-            const data = ctx.data
-            for (let i = 0; i < data.length; i += 4) {
-                const n = i / 4;
-                if (segmentation.data[n] === 0) { // 人物でない部分
-                    data[i] = 255;     // R
-                    data[i + 1] = 255; // G
-                    data[i + 2] = 255; // B
-                }
-            }
-
-
             return canvas.toDataURL('image/jpeg', 0.95);
         }
 
