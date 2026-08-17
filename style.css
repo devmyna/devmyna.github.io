@@ -48,10 +48,6 @@
   --container-max-width: 1040px;
 }
 
-/* 文字サイズ「大」選択時のスケーリング */
-html.font-size-large {
-  --font-size-base: 21px;
-}
 
 /* ==========================================================================
    Reset & Global Styles
@@ -174,55 +170,6 @@ ul, ol {
   color: var(--color-text-muted);
 }
 
-/* 文字サイズ切り替え */
-.header-controls {
-  display: flex;
-  align-items: center;
-}
-
-.font-size-switcher {
-  display: flex;
-  align-items: center;
-  background-color: var(--color-surface-soft);
-  border: 1px solid var(--color-border);
-  border-radius: var(--radius-full);
-  padding: 3px 6px;
-  gap: 4px;
-}
-
-.switcher-label {
-  font-size: 0.85rem;
-  color: var(--color-text-sub);
-  margin-right: 2px;
-  font-weight: 500;
-  padding-left: 6px;
-}
-
-.btn-size {
-  border: none;
-  background: transparent;
-  padding: 4px 12px;
-  border-radius: var(--radius-full);
-  font-size: 0.9rem;
-  font-weight: 700;
-  color: var(--color-text-sub);
-  min-height: 36px;
-  min-width: 48px;
-  display: inline-flex;
-  align-items: center;
-  justify-content: center;
-  transition: all 0.2s ease;
-}
-
-.btn-size:hover {
-  background-color: rgba(0, 0, 0, 0.05);
-}
-
-.btn-size.active {
-  background-color: var(--color-primary);
-  color: #ffffff;
-  box-shadow: 0 1px 3px rgba(0, 0, 0, 0.2);
-}
 
 /* メインナビゲーション */
 .site-nav {
@@ -880,7 +827,6 @@ ul, ol {
 @media print {
   .site-header,
   .btn-back-to-top,
-  .font-size-switcher,
   .skip-link {
     display: none !important;
   }
